@@ -1136,11 +1136,92 @@ function CopyTradeApp() {
     }:m));
   };
 
+  // ── Cargar datos reales desde Supabase ──
+  const cargarDesdeSupabase = useCallback(async (cfg) => {
+    if (!cfg?.url || !cfg?.key) return;
+    const h = {
+      "apikey": cfg.key,
+      "Authorization": `Bearer ${cfg.key}`,
+    };
+    try {
+      // Cargar cuentas maestras
+      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*`, { headers: h });
+      if (!rM.ok) return;
+      const maestras = await rM.json();
+      if (!maestras || maestras.length === 0) return;
+
+      // Cargar cuentas receptoras
+      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*`, { headers: h });
+      const receptoras = rR.ok ? await rR.json() : [];
+
+      // Cargar ejecuciones de hoy para contar ops
+      const hoy = new Date().toISOString().split("T")[0];
+      const rE = await fetch(`${cfg.url}/rest/v1/ejecuciones?ejecutado_en=gte.${hoy}T00:00:00&select=maestra_id`, { headers: h });
+      const ejecs = rE.ok ? await rE.json() : [];
+
+      // Mapear a formato del dashboard
+      const mapped = maestras.map(m => {
+        const opsHoy = ejecs.filter(e => e.maestra_id === m.id).length;
+        const followers = receptoras
+          .filter(r => r.maestra_id === m.id)
+          .map(r => ({
+            id:          r.id,
+            tag:         r.tag || r.id.slice(-2),
+            name:        r.nombre,
+            accountNum:  r.numero_cuenta || r.id,
+            broker:      r.broker || "—",
+            platform:    r.plataforma || "MT5",
+            status:      r.estado || "offline",
+            balance:     parseFloat(r.balance) || 0,
+            capitalPct:  parseFloat(r.capital_pct) || 50,
+            riskPct:     parseFloat(r.riesgo_pct) || 0.5,
+            delayMs:     r.delay_ms || 0,
+            readOnly:    r.solo_lectura || false,
+            enabled:     r.activa !== false,
+            ping:        r.ping_ms || 0,
+            failedCopies:r.copias_fallidas || 0,
+            lastOp:      r.ultima_op ? new Date(r.ultima_op).toLocaleTimeString("es",{hour12:false}) : "—",
+          }));
+        return {
+          id:        m.id,
+          tag:       m.tag || "M1",
+          name:      m.nombre,
+          broker:    m.broker || "—",
+          platform:  m.plataforma || "MT5",
+          accountNum:m.numero_cuenta || m.id,
+          status:    m.estado || "offline",
+          balance:   parseFloat(m.balance) || 0,
+          equity:    parseFloat(m.equidad) || 0,
+          openPnL:   parseFloat(m.pnl_abierto) || 0,
+          copierOn:  m.copiadora_on !== false,
+          readOnly:  false,
+          opsToday:  opsHoy,
+          followers,
+        };
+      });
+
+      setMasters(mapped);
+      if (mapped.length > 0) setActiveMId(mapped[0].id);
+      setDemoMode(false);
+    } catch(e) {
+      console.error("Error cargando Supabase:", e);
+    }
+  }, []);
+
+  // ── Polling automático cada 5 segundos cuando Supabase está conectado ──
+  useEffect(() => {
+    if (!supaConfig?.url) return;
+    cargarDesdeSupabase(supaConfig);
+    const iv = setInterval(() => cargarDesdeSupabase(supaConfig), 5000);
+    return () => clearInterval(iv);
+  }, [supaConfig, cargarDesdeSupabase]);
+
   // ── Guardar config Supabase ──
   const handleSupaSave = useCallback(cfg=>{
     setSupaConfig(cfg);
     setDemoMode(!cfg.url);
-  },[]);
+    cargarDesdeSupabase(cfg);
+  },[cargarDesdeSupabase]);
 
   /* ── Render ── */
   return (
