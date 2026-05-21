@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07091a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CT Admin">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" id="tt-admin-manifest">
+<title>CopyTrade MT5 Pro — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07091a;--bg2:#0a0d20;--sb:#080b1c;--card:#0e1229;--card2:#111627;--card3:#151a30;
+  --bdr:#1e2545;--bdr2:#2a3260;--bdr3:#3a4470;
+  --green:#00e5b0;--red:#ff3860;--gold:#f7c948;--cyan:#00cfff;--purp:#8a94a8;
+  --gray:#3a4060;--gray2:#7a85a8;--text:#e8ecf8;--text2:#a8b4d8;
+  --accent:#5a6070;--accent2:#3d4452;
+  --glow-g:0 0 20px rgba(0,229,176,.2);--glow-r:0 0 20px rgba(255,56,96,.25);
+  --glow-b:0 0 20px rgba(120,130,150,.2);
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;font-size:13px;padding-bottom:env(safe-area-inset-bottom)}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(67,97,238,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(67,97,238,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+input,select,textarea{background:var(--bg2);border:1px solid var(--bdr);color:var(--text);padding:9px 13px;border-radius:9px;font-size:12px;outline:none;width:100%;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(90,96,112,.12)}
+button{cursor:pointer;border:none;border-radius:9px;font-size:12px;font-weight:700;padding:9px 16px;transition:all .2s;font-family:'Exo 2',sans-serif;letter-spacing:.3px}
+button:hover{opacity:.9;transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+.btn-g{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:var(--glow-b)}
+.btn-r{background:rgba(255,56,96,.12);color:var(--red);border:1px solid rgba(255,56,96,.25)}
+.btn-r:hover{background:rgba(255,56,96,.2)}
+.btn-o{background:rgba(247,201,72,.12);color:var(--gold);border:1px solid rgba(247,201,72,.25)}
+.btn-o:hover{background:rgba(247,201,72,.2)}
+.btn-gray{background:var(--card2);color:var(--gray2);border:1px solid var(--bdr)}
+.btn-gray:hover{border-color:var(--bdr2);color:var(--text2)}
+.btn-copy{background:rgba(0,207,255,.1);color:var(--cyan);border:1px solid rgba(0,207,255,.2);padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700}
+.btn-copy:hover{background:rgba(0,207,255,.2)}
+.btn-del{background:rgba(255,56,96,.08);color:var(--red);border:1px solid rgba(255,56,96,.15);padding:4px 8px;border-radius:6px;font-size:10px}
+.btn-del:hover{background:rgba(255,56,96,.18)}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;padding:20px;position:relative;z-index:1}
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--card);border:1px solid var(--bdr2);border-radius:20px;padding:44px 36px;width:min(360px, calc(100vw - 32px));text-align:center;box-shadow:0 0 80px rgba(99,102,241,.15)}
+.login-box .logo-icon{width:54px;height:54px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 18px;box-shadow:var(--glow-b)}
+/* TOPBAR */
+.topbar{background:rgba(8,11,28,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr);padding:14px 28px;padding-top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,.5),rgba(0,207,255,.3),transparent)}
+/* MAIN */
+.main-wrap{max-width:1100px;margin:0 auto;padding:28px 20px;position:relative;z-index:1}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.kbox{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:18px;text-align:center;position:relative;overflow:hidden;transition:all .25s}
+.kbox:hover{border-color:var(--bdr2);transform:translateY(-2px)}
+.kbox::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.kbox.g::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.kbox.r::after{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.kbox.gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.kbox.b::after{background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.kbox .lbl{color:var(--gray2);font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:7px;font-family:'Exo 2',sans-serif}
+.kbox .val{font-size:28px;font-weight:900;font-family:'Exo 2',sans-serif}
+/* SECTION HEADERS */
+.sec-title{font-size:10px;font-weight:700;letter-spacing:2.5px;color:var(--gray2);text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bdr);font-family:'Exo 2',sans-serif}
+/* CREATE FORM */
+.field label{display:block;color:var(--gray2);font-size:9px;letter-spacing:1.5px;margin-bottom:5px;text-transform:uppercase;font-family:'Exo 2',sans-serif}
+/* NEW CODES BOX */
+.codes-box{margin-top:16px;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;display:none}
+.codes-box-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bdr)}
+.code-item{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid rgba(30,37,64,.5)}
+.code-item:last-child{border-bottom:none}
+.code-text{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);flex:1}
+/* SORT / FILTER BAR */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.sort-btn{background:var(--card2);border:1px solid var(--bdr);color:var(--gray2);padding:6px 12px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
+.sort-btn.act{border-color:var(--accent);color:#8a94a8;background:rgba(90,96,112,.1)}
+.sort-btn:hover{border-color:var(--bdr2);color:var(--text2);transform:none}
+/* EMPRESA CARD */
+.empresa-card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;margin-bottom:14px;overflow:hidden;transition:border-color .2s}
+.empresa-card:hover{border-color:var(--bdr2)}
+.empresa-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none}
+.empresa-header:hover{background:rgba(99,102,241,.04)}
+.empresa-name{font-family:'Exo 2',sans-serif;font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px}
+.empresa-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;font-family:'Exo 2',sans-serif;flex-shrink:0}
+.empresa-stats{display:flex;gap:16px;align-items:center}
+.esta{text-align:center}
+.esta-val{font-size:14px;font-weight:800;font-family:'Exo 2',sans-serif}
+.esta-lbl{font-size:8px;color:var(--gray2);text-transform:uppercase;letter-spacing:1px;font-family:'Exo 2',sans-serif}
+.empresa-body{display:none;border-top:1px solid var(--bdr)}
+.empresa-body.open{display:block}
+.empresa-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:rgba(7,9,26,.5);gap:8px;flex-wrap:wrap}
+/* LICENSE ROWS */
+.lic-row{display:grid;grid-template-columns:minmax(180px,1fr) 100px 120px 90px 120px auto;gap:10px;align-items:center;padding:10px 20px;border-bottom:1px solid rgba(30,37,64,.4);transition:background .15s}
+.lic-row:last-child{border-bottom:none}
+.lic-row:hover{background:rgba(99,102,241,.04)}
+.lic-row-header{background:rgba(7,9,26,.6);font-size:8px;color:var(--gray2);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;font-family:'Exo 2',sans-serif;padding:8px 20px;border-bottom:1px solid var(--bdr)}
+.code-col{display:flex;align-items:center;gap:6px}
+.code-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold)}
+/* STATUS TAGS */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;font-family:'Exo 2',sans-serif}
+.tag-g{background:rgba(0,229,176,.12);color:var(--green);border:1px solid rgba(0,229,176,.2)}
+.tag-r{background:rgba(255,56,96,.12);color:var(--red);border:1px solid rgba(255,56,96,.2)}
+.tag-gray{background:rgba(58,64,96,.3);color:var(--gray2);border:1px solid var(--bdr)}
+/* PROGRESS BAR */
+.dev-bar{background:var(--bdr);border-radius:99px;height:4px;overflow:hidden;margin-top:4px}
+.dev-fill{height:100%;border-radius:99px;transition:width .4s}
+/* BADGE */
+.badge-priv{display:inline-flex;align-items:center;gap:5px;background:rgba(255,56,96,.1);border:1px solid rgba(255,56,96,.2);color:var(--red);padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Exo 2',sans-serif}
+/* TOAST */
+#toast-adm{position:fixed;bottom:20px;right:20px;background:var(--card2);border:1px solid var(--bdr2);border-radius:12px;padding:12px 18px;font-size:12px;font-weight:600;z-index:99999;display:none;box-shadow:0 8px 40px rgba(0,0,0,.6);min-width:220px;font-family:'DM Sans',sans-serif}
+/* CHEVRON */
+.chevron{transition:transform .25s;font-size:14px;color:var(--gray2)}
+.chevron.open{transform:rotate(180deg)}
+/* PLAN BADGES */
+.tag-basic{background:rgba(90,96,112,.2);color:#8a94a8;border:1px solid rgba(90,96,112,.3)}
+.tag-pro{background:rgba(0,207,255,.12);color:var(--cyan);border:1px solid rgba(0,207,255,.25)}
+.tag-vip{background:rgba(247,201,72,.12);color:var(--gold);border:1px solid rgba(247,201,72,.3)}
+/* HEARTBEAT */
+.hb-online{color:var(--green)}
+.hb-offline{color:var(--gray2)}
+/* COPY FLASH */
+@keyframes copy-flash{0%,100%{opacity:1}50%{opacity:.4}}
+.copy-flash{animation:copy-flash .3s ease}
+/* ═══════ RESPONSIVE MOBILE ═══════ */
+/* LOGIN — pantalla completa en móvil */
+@media(max-width:600px){
+  .login-box{width:calc(100% - 32px);max-width:380px;padding:32px 22px;border-radius:16px}
+}
+
+/* TOPBAR — compacto en móvil + notch iOS */
+@media(max-width:768px){
+  .topbar{
+    padding: 8px 14px 8px 14px;
+    padding-top: max(48px, calc(env(safe-area-inset-top) + 8px));
+    gap:8px;
+  }
+  .badge-priv{display:none}
+  .topbar-title-wrap .subtitle{display:none}
+  .topbar-logo-icon{width:30px;height:30px;font-size:14px}
+  .topbar-title-wrap .title-text{font-size:13px}
+  .btn-refresh-text{display:none}
+  .btn-logout-text{display:none}
+}
+
+/* MAIN WRAP — padding reducido */
+@media(max-width:600px){
+  .main-wrap{padding:10px 10px;padding-bottom:32px}
+}
+
+/* KPI GRID — 2x2 en móvil */
+@media(max-width:768px){
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+  .kbox{padding:10px 8px}
+  .kbox .val{font-size:20px}
+  .kbox .lbl{font-size:8px;letter-spacing:1px;margin-bottom:3px}
+}
+
+/* CREATE FORM — apilado en móvil */
+@media(max-width:600px){
+  .create-form-row{flex-direction:column;gap:8px}
+  .create-form-row .field{min-width:100%!important;max-width:100%!important;flex:none!important}
+  .create-form-row .btn-create{width:100%;padding:12px;font-size:13px}
+}
+
+/* FILTER AREA — apilado en móvil */
+@media(max-width:600px){
+  .filter-area-top{flex-direction:column;align-items:flex-start;gap:8px}
+  .filter-inputs-row{flex-direction:column;width:100%;gap:6px}
+  #search-input{width:100%!important}
+  #filter-status{width:100%!important}
+  #filter-reseller{width:100%!important}
+  .lic-count-badge{font-size:10px}
+}
+
+/* SORT BAR — scroll horizontal en móvil */
+@media(max-width:600px){
+  .filter-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;gap:6px;scrollbar-width:none}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .sort-btn{white-space:nowrap;flex-shrink:0}
+}
+
+/* EMPRESA CARD — compacta en móvil */
+@media(max-width:600px){
+  .empresa-card{margin-bottom:8px;border-radius:10px}
+  .empresa-header{padding:10px 12px;gap:6px}
+  .empresa-name{font-size:13px;gap:6px}
+  .empresa-avatar{width:28px;height:28px;font-size:11px;border-radius:7px;flex-shrink:0}
+  .empresa-stats{gap:8px}
+  .esta{text-align:center}
+  .esta-val{font-size:13px;font-weight:800}
+  .esta-lbl{font-size:7px}
+  .empresa-toolbar{padding:7px 12px;gap:5px}
+  .empresa-toolbar-btns{flex-wrap:wrap;gap:5px}
+  .chevron{font-size:12px}
+}
+
+/* LICENSE ROW — tarjeta ultra-compacta en móvil */
+@media(max-width:600px){
+  .lic-row-header{display:none!important}
+  .lic-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-rows:auto auto auto;
+    gap:4px 8px;
+    padding:9px 12px;
+    border-bottom:1px solid rgba(30,37,64,.4);
+    align-items:start;
+  }
+  /* código — primera columna, primera fila */
+  .lic-row>div:nth-child(1){
+    grid-column:1;grid-row:1;
+    align-self:center;
+  }
+  /* estado — segunda columna, primera fila */
+  .lic-row>div:nth-child(2){
+    grid-column:2;grid-row:1;
+    align-self:center;
+  }
+  /* dispositivos — fila completa */
+  .lic-row>div:nth-child(3){
+    grid-column:1/-1;grid-row:2;
+  }
+  /* límite y fecha — ocultos */
+  .lic-row>div:nth-child(4),
+  .lic-row>div:nth-child(5){display:none!important}
+  /* acciones — fila completa */
+  .lic-row>div:nth-child(6){
+    grid-column:1/-1;grid-row:3;
+  }
+  .lic-row:last-child{border-bottom:none}
+  .lic-row .hide-mob{display:none}
+  /* código compacto */
+  .lic-row .code-col{align-items:center}
+  .lic-row .code-val{font-size:11px;letter-spacing:0}
+  /* dispositivos compactos */
+  .lic-row .dev-bar{height:3px;margin-top:3px;margin-bottom:3px}
+  /* IDs de dispositivos: más pequeños */
+  .lic-row [style*="FP"],[style*="font-size:9px"]{font-size:9px!important}
+  /* botones de acción: todos en una fila ajustada */
+  .lic-row>div:nth-child(6)>div{
+    display:flex;flex-wrap:nowrap;gap:4px;width:100%;
+  }
+  .lic-row>div:nth-child(6)>div>button{
+    flex:1;padding:5px 4px;font-size:10px;min-width:0;
+  }
+}
+
+/* CODES BOX — scroll horizontal para códigos largos */
+@media(max-width:600px){
+  .code-text{font-size:11px;word-break:break-all}
+  .codes-box{font-size:12px}
+  /* Card sections más compactas */
+  .card{padding:14px 12px}
+  .sec-title{font-size:9px;margin-bottom:12px;padding-bottom:8px}
+  /* Empresa card: texto número de licencias más pequeño */
+  .empresa-name>span{font-size:9px!important}
+  /* Guía rápida más compacta */
+  .quick-guide{line-height:1.7;padding:10px 12px}
+}
+
+/* TOAST — bottom seguro en iOS */
+@media(max-width:600px){
+  #toast-adm{
+    bottom:max(16px, env(safe-area-inset-bottom));
+    left:12px;right:12px;
+    width:auto;
+    text-align:center;
+    font-size:13px;
+  }
+}
+
+/* MODALES — ajuste en móvil */
+@media(max-width:600px){
+  .adm-overlay-box{width:calc(100% - 32px)!important;margin:0 16px;max-width:none!important}
+}
+
+/* GUÍA RÁPIDA — más legible en móvil */
+@media(max-width:600px){
+  .quick-guide{font-size:12px;line-height:2;padding:12px 14px}
+  .quick-guide span{display:block;margin-bottom:2px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo-icon">⚡</div>
+    <div style="font-family:'Exo 2',sans-serif;font-size:22px;font-weight:900;margin-bottom:4px;background:linear-gradient(90deg,var(--text),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">CopyTrade MT5 Pro</div>
+    <div style="color:var(--gray2);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;font-family:'Exo 2',sans-serif">Panel de Administrador</div>
+    <input id="pw-input" type="password" placeholder="Contraseña de administrador" style="margin-bottom:12px;text-align:center;font-size:14px" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-g" onclick="doLogin()" style="width:100%;padding:13px;font-size:13px">ENTRAR AL PANEL</button>
+    <div id="pw-err" style="color:var(--red);font-size:12px;margin-top:10px;min-height:18px"></div>
+    <div style="color:var(--gray);font-size:10px;margin-top:22px;border-top:1px solid var(--bdr);padding-top:14px">⚠ Nunca compartas este archivo con tus clientes</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="topbar-logo-icon" style="width:36px;height:36px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--glow-b);flex-shrink:0">⚡</div>
+      <div class="topbar-title-wrap">
+        <div class="title-text" style="font-family:'Exo 2',sans-serif;font-size:15px;font-weight:900;background:linear-gradient(90deg,var(--text),#8a94a8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CopyTrade MT5 Pro</div>
+        <div class="subtitle" style="color:var(--gray2);font-size:10px;font-family:'Exo 2',sans-serif;letter-spacing:1px">PANEL DE ADMINISTRADOR</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="badge-priv">🔴 PRIVADO</div>
+      <button class="btn-gray" onclick="loadLicenses()" style="font-size:11px;padding:7px 12px;display:flex;align-items:center;gap:5px">
+        <span id="refresh-icon">🔄</span><span class="btn-refresh-text"> Actualizar</span>
+      </button>
+      <button class="btn-r" onclick="doLogout()" style="font-size:11px;padding:7px 11px;display:flex;align-items:center;gap:4px">🔒<span class="btn-logout-text"> Salir</span></button>
+    </div>
+  </div>
+
+  <div class="main-wrap">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="global-kpis">
+      <div class="kbox gold"><div class="lbl">Total Licencias</div><div class="val" id="k-total" style="color:var(--gold)">—</div></div>
+      <div class="kbox g"><div class="lbl">Activas</div><div class="val" id="k-activated" style="color:var(--green)">—</div></div>
+      <div class="kbox b"><div class="lbl">Sin activar</div><div class="val" id="k-unused" style="color:#8a94a8">—</div></div>
+      <div class="kbox r"><div class="lbl">Revocadas</div><div class="val" id="k-revoked" style="color:var(--red)">—</div></div>
+    </div>
+    <!-- KPIs PLANES -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+      <div class="kbox b" style="padding:12px"><div class="lbl">🔵 Basic</div><div class="val" id="k-basic" style="color:#8a94a8;font-size:22px">—</div></div>
+      <div class="kbox b" style="padding:12px"><div class="lbl">🔷 Pro</div><div class="val" id="k-pro" style="color:var(--cyan);font-size:22px">—</div></div>
+      <div class="kbox gold" style="padding:12px"><div class="lbl">👑 VIP</div><div class="val" id="k-vip" style="color:var(--gold);font-size:22px">—</div></div>
+    </div>
+
+    <!-- CREAR LICENCIAS -->
+    <div class="card section" style="margin-bottom:20px">
+      <div class="sec-title">➕ Crear Licencias — CopyTrade MT5 Pro</div>
+      <div class="create-form-row" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="flex:2;min-width:160px">
+          <label>Nombre del Cliente / Revendedor</label>
+          <input id="new-reseller" type="text" placeholder="Ej: CARLOS, JUAN, EMPRESA_X...">
+        </div>
+        <div class="field" style="min-width:130px">
+          <label>Plan</label>
+          <select id="new-plan" onchange="onPlanChange()">
+            <option value="basic">🔵 Basic — 1M / 3F</option>
+            <option value="pro">🔷 Pro — 3M / 10F</option>
+            <option value="vip">👑 VIP — Ilimitado</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:80px">
+          <label>Maestras</label>
+          <input id="new-masters" type="number" value="1" min="1" max="999">
+        </div>
+        <div class="field" style="max-width:80px">
+          <label>Followers</label>
+          <input id="new-followers" type="number" value="3" min="1" max="999">
+        </div>
+        <div class="field" style="max-width:70px">
+          <label>Cantidad</label>
+          <input id="new-qty" type="number" value="1" min="1" max="100">
+        </div>
+        <div class="field" style="max-width:120px">
+          <label>Dispositivos</label>
+          <select id="new-max">
+            <option value="1">1 dispositivo</option>
+            <option value="2" selected>2 dispositivos</option>
+            <option value="3">3 dispositivos</option>
+            <option value="5">5 dispositivos</option>
+            <option value="10">10 dispositivos</option>
+            <option value="999">Ilimitado</option>
+          </select>
+        </div>
+        <button class="btn-g btn-create" onclick="createLicenses()" style="white-space:nowrap;padding:10px 20px">✅ Crear Lote</button>
+      </div>
+      <div id="create-msg" style="min-height:18px;margin-top:10px;font-size:12px"></div>
+      <!-- Códigos creados -->
+      <div class="codes-box" id="new-codes-list">
+        <div class="codes-box-header">
+          <span style="font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:var(--green)" id="codes-header-label">Códigos creados</span>
+          <button class="btn-copy" onclick="copyAllCodes()" style="padding:6px 12px;font-size:11px">📋 Copiar todos</button>
+        </div>
+        <div id="codes-items"></div>
+      </div>
+    </div>
+
+    <!-- FILTROS Y ORDEN -->
+    <div class="filter-area-top" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div style="font-family:'Exo 2',sans-serif;font-size:16px;font-weight:800;color:var(--text)">
+        Empresas & Licencias
+        <span id="total-badge" class="lic-count-badge" style="font-size:11px;font-weight:600;color:var(--gray2);margin-left:8px"></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <!-- Búsqueda -->
+        <input id="search-input" type="text" placeholder="🔍 Buscar código..." style="width:180px;padding:7px 12px;font-size:11px" oninput="applyFilters()">
+        <!-- Filtro status -->
+        <select id="filter-status" onchange="applyFilters()" style="width:140px;padding:7px 11px;font-size:11px">
+          <option value="">Todos los estados</option>
+          <option value="active">Solo activas</option>
+          <option value="used">Activadas</option>
+          <option value="unused">Sin usar</option>
+          <option value="revoked">Revocadas</option>
+        </select>
+        <!-- Filtro empresa -->
+        <select id="filter-reseller" onchange="applyFilters()" style="width:160px;padding:7px 11px;font-size:11px">
+          <option value="">Todas las empresas</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- SORT BUTTONS -->
+    <div class="filter-bar">
+      <span style="font-size:9px;color:var(--gray2);text-transform:uppercase;letter-spacing:1.5px;font-family:'Exo 2',sans-serif">Ordenar:</span>
+      <button class="sort-btn act" id="sort-empresa" onclick="setSort('empresa')">🏢 Empresa</button>
+      <button class="sort-btn" id="sort-fecha" onclick="setSort('fecha')">📅 Fecha creación</button>
+      <button class="sort-btn" id="sort-estado" onclick="setSort('estado')">🔴 Estado</button>
+      <button class="sort-btn" id="sort-uso" onclick="setSort('uso')">📊 Uso</button>
+    </div>
+
+    <!-- LISTA DE EMPRESAS -->
+    <div id="empresas-list">
+      <div style="text-align:center;color:var(--gray2);padding:48px;font-family:'Exo 2',sans-serif">
+        ⏳ Cargando licencias...
+      </div>
+    </div>
+
+    <!-- GUÍA RÁPIDA -->
+    <div class="quick-guide" style="margin-top:20px;background:var(--card2);border:1px solid var(--bdr);border-radius:12px;padding:14px 18px;color:var(--gray2);font-size:11px;line-height:1.9">
+      <div style="font-weight:700;color:var(--text2);margin-bottom:6px;font-family:'Exo 2',sans-serif;font-size:12px">💡 Guía rápida — CopyTrade MT5 Pro</div>
+      <span style="color:var(--cyan);font-weight:700">🔵 Basic</span> — 1 cuenta maestra, 3 followers.&nbsp;&nbsp;
+      <span style="color:var(--cyan);font-weight:700">🔷 Pro</span> — 3 maestras, 10 followers.&nbsp;&nbsp;
+      <span style="color:var(--gold);font-weight:700">👑 VIP</span> — maestras y followers ilimitados.&nbsp;&nbsp;
+      <span style="color:var(--cyan);font-weight:700">🔄 Reset</span> — libera todos los dispositivos registrados del EA.&nbsp;&nbsp;
+      <span style="color:var(--red);font-weight:700">🚫 Revocar</span> — bloquea el EA al instante.&nbsp;&nbsp;
+      <span style="color:var(--green);font-weight:700">♻ Restaurar</span> — reactiva una licencia revocada.&nbsp;&nbsp;
+      <span style="color:var(--gold);font-weight:700">🗑 Eliminar</span> — borra el código de Firebase permanentemente.
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-adm"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  COPYTRADE MT5 PRO — PANEL ADMIN v1
+// ═══════════════════════════════════════════════════════════
+var FB_PROJECT = 'journa-2d389';
+var FB_KEY = 'AIzaSyDi65NcJKjx0ClhJ0T2RFjf4XLK38AidNw';
+var ADMIN_PASSWORD = '123789';
+// ═══════════════════════════════════════════════════════════
+
+var PLAN_LIMITS = {
+  basic: { maxMasters: 1,   maxFollowers: 3   },
+  pro:   { maxMasters: 3,   maxFollowers: 10  },
+  vip:   { maxMasters: 999, maxFollowers: 999 }
+};
+
+var FB_BASE = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents/licenses';
+var allLicenses = [];
+var currentSort = 'empresa';
+var expandedEmpresas = {};
+var newCodesList = [];
+
+// ──────────────────────────────────────────
+//  LOGIN
+// ──────────────────────────────────────────
+function doLogin() {
+  var pw = document.getElementById('pw-input').value;
+  if (pw === ADMIN_PASSWORD) {
+    sessionStorage.setItem('tt_admin_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadLicenses();
+  } else {
+    document.getElementById('pw-err').textContent = '❌ Contraseña incorrecta';
+    document.getElementById('pw-input').value = '';
+    setTimeout(function(){ document.getElementById('pw-err').textContent = ''; }, 2000);
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('tt_admin_auth');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+}
+
+// ── Auto-login si la sesión sigue activa ─────────────────────────────────────
+(function initSession() {
+  if (sessionStorage.getItem('tt_admin_auth') === '1') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.addEventListener('DOMContentLoaded', function(){ loadLicenses(); });
+  }
+})();
+
+// ──────────────────────────────────────────
+//  TOAST
+// ──────────────────────────────────────────
+var _toastTimer = null;
+function showToast(msg, color) {
+  var t = document.getElementById('toast-adm');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.borderColor = color || 'var(--bdr2)';
+  t.style.color = color || 'var(--text)';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ t.style.display = 'none'; }, 2800);
+}
+
+// ──────────────────────────────────────────
+//  COPIAR AL PORTAPAPELES
+// ──────────────────────────────────────────
+function copyText(text, btnEl) {
+  navigator.clipboard.writeText(text).then(function() {
+    if (btnEl) {
+      var orig = btnEl.textContent;
+      btnEl.textContent = '✅ Copiado';
+      btnEl.classList.add('copy-flash');
+      setTimeout(function(){ btnEl.textContent = orig; btnEl.classList.remove('copy-flash'); }, 1400);
+    }
+    showToast('📋 Copiado al portapapeles', 'var(--cyan)');
+  }).catch(function() {
+    // Fallback
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('📋 Copiado', 'var(--cyan)');
+  });
+}
+
+function copyAllCodes() {
+  var text = newCodesList.join('\n');
+  copyText(text, null);
+  showToast('📋 Todos los códigos copiados (' + newCodesList.length + ')', 'var(--green)');
+}
+
+// ──────────────────────────────────────────
+//  CARGAR LICENCIAS
+// ──────────────────────────────────────────
+async function loadLicenses() {
+  var ri = document.getElementById('refresh-icon');
+  if (ri) ri.textContent = '⏳';
+  document.getElementById('empresas-list').innerHTML =
+    '<div style="text-align:center;color:var(--gray2);padding:48px;font-family:\'Exo 2\',sans-serif">⏳ Cargando...</div>';
+
+  try {
+    var allDocs = [];
+    var nextPage = null;
+    do {
+      var url = FB_BASE + '?key=' + FB_KEY + '&pageSize=300' + (nextPage ? '&pageToken=' + nextPage : '');
+      var res = await fetch(url);
+      var data = await res.json();
+      if (!res.ok || data.error) {
+        var msg = (data.error && data.error.message) ? data.error.message : 'HTTP ' + res.status;
+        throw new Error('Firebase: ' + msg);
+      }
+      if (data.documents) allDocs = allDocs.concat(data.documents);
+      nextPage = data.nextPageToken || null;
+    } while (nextPage);
+
+    allLicenses = allDocs.map(function(doc) {
+      var f = doc.fields || {};
+      var id = doc.name.split('/').pop();
+      var devList = [];
+      if (f.devices && f.devices.arrayValue && f.devices.arrayValue.values) {
+        devList = f.devices.arrayValue.values.map(function(v){ return v.stringValue || ''; }).filter(Boolean);
+      } else if (f.lastDevice && f.lastDevice.stringValue) {
+        devList = [f.lastDevice.stringValue];
+      }
+      var plan = (f.plan && f.plan.stringValue) || 'basic';
+      var planDef = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+      return {
+        id: id,
+        reseller: (f.reseller && f.reseller.stringValue) || '—',
+        active: f.active ? f.active.booleanValue : true,
+        activations: parseInt((f.activations && f.activations.integerValue) || '0'),
+        maxActivations: parseInt((f.maxActivations && f.maxActivations.integerValue) || '2'),
+        activatedAt: (f.activatedAt && f.activatedAt.timestampValue) || null,
+        createdAt: (f.createdAt && f.createdAt.timestampValue) || null,
+        lastDevice: (f.lastDevice && f.lastDevice.stringValue) || null,
+        lastHeartbeat: (f.lastHeartbeat && f.lastHeartbeat.timestampValue) || null,
+        devices: devList,
+        plan: plan,
+        maxMasters:   parseInt((f.maxMasters   && f.maxMasters.integerValue)   || planDef.maxMasters),
+        maxFollowers: parseInt((f.maxFollowers  && f.maxFollowers.integerValue) || planDef.maxFollowers)
+      };
+    });
+
+    updateKPIs();
+    updateFilters();
+    applyFilters();
+    if (ri) ri.textContent = '🔄';
+
+  } catch(e) {
+    document.getElementById('empresas-list').innerHTML =
+      '<div style="text-align:center;color:var(--red);padding:48px">❌ Error al conectar con Firebase.<br><span style="font-size:11px;color:var(--gray2)">Verifica tu Project ID y API Key.</span><br><span style="font-size:10px;color:#4a5080;margin-top:6px;display:block">' + (e.message || '') + '</span></div>';
+    if (ri) ri.textContent = '🔄';
+    console.error(e);
+  }
+}
+
+// ──────────────────────────────────────────
+//  KPIs
+// ──────────────────────────────────────────
+function updateKPIs() {
+  var total = allLicenses.length;
+  var activated = allLicenses.filter(function(l){ return l.activations > 0 && l.active; }).length;
+  var unused = allLicenses.filter(function(l){ return l.activations === 0 && l.active; }).length;
+  var revoked = allLicenses.filter(function(l){ return !l.active; }).length;
+  var basic = allLicenses.filter(function(l){ return l.plan === 'basic'; }).length;
+  var pro   = allLicenses.filter(function(l){ return l.plan === 'pro';   }).length;
+  var vip   = allLicenses.filter(function(l){ return l.plan === 'vip';   }).length;
+  document.getElementById('k-total').textContent = total;
+  document.getElementById('k-activated').textContent = activated;
+  document.getElementById('k-unused').textContent = unused;
+  document.getElementById('k-revoked').textContent = revoked;
+  document.getElementById('k-basic').textContent = basic;
+  document.getElementById('k-pro').textContent = pro;
+  document.getElementById('k-vip').textContent = vip;
+}
+
+// ──────────────────────────────────────────
+//  FILTROS
+// ──────────────────────────────────────────
+function updateFilters() {
+  var sel = document.getElementById('filter-reseller');
+  var resellers = [...new Set(allLicenses.map(function(l){ return l.reseller; }))].sort();
+  sel.innerHTML = '<option value="">Todas las empresas</option>';
+  resellers.forEach(function(r) {
+    sel.innerHTML += '<option value="' + r + '">' + r + '</option>';
+  });
+}
+
+function setSort(s) {
+  currentSort = s;
+  ['empresa','fecha','estado','uso'].forEach(function(k) {
+    var b = document.getElementById('sort-'+k);
+    if (b) b.className = 'sort-btn' + (k === s ? ' act' : '');
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  var search = (document.getElementById('search-input').value || '').toLowerCase().trim();
+  var filterR = document.getElementById('filter-reseller').value;
+  var filterS = document.getElementById('filter-status').value;
+
+  var filtered = allLicenses.filter(function(l) {
+    if (search && l.id.toLowerCase().indexOf(search) === -1 && l.reseller.toLowerCase().indexOf(search) === -1) return false;
+    if (filterR && l.reseller !== filterR) return false;
+    if (filterS === 'active' && !l.active) return false;
+    if (filterS === 'revoked' && l.active) return false;
+    if (filterS === 'used' && (l.activations === 0 || !l.active)) return false;
+    if (filterS === 'unused' && (l.activations > 0 || !l.active)) return false;
+    return true;
+  });
+
+  // Agrupar por empresa
+  var byEmpresa = {};
+  filtered.forEach(function(l) {
+    if (!byEmpresa[l.reseller]) byEmpresa[l.reseller] = [];
+    byEmpresa[l.reseller].push(l);
+  });
+
+  // Ordenar empresas
+  var empresaKeys = Object.keys(byEmpresa);
+  if (currentSort === 'empresa') {
+    empresaKeys.sort();
+  } else if (currentSort === 'fecha') {
+    empresaKeys.sort(function(a, b) {
+      var la = byEmpresa[a], lb = byEmpresa[b];
+      var da = Math.max.apply(null, la.map(function(l){ return l.createdAt ? new Date(l.createdAt).getTime() : 0; }));
+      var db = Math.max.apply(null, lb.map(function(l){ return l.createdAt ? new Date(l.createdAt).getTime() : 0; }));
+      return db - da;
+    });
+  } else if (currentSort === 'estado') {
+    empresaKeys.sort(function(a, b) {
+      var ra = byEmpresa[a].filter(function(l){ return !l.active; }).length;
+      var rb = byEmpresa[b].filter(function(l){ return !l.active; }).length;
+      return rb - ra;
+    });
+  } else if (currentSort === 'uso') {
+    empresaKeys.sort(function(a, b) {
+      var ua = byEmpresa[a].filter(function(l){ return l.activations > 0; }).length;
+      var ub = byEmpresa[b].filter(function(l){ return l.activations > 0; }).length;
+      return ub - ua;
+    });
+  }
+
+  // Ordenar licencias dentro de cada empresa
+  empresaKeys.forEach(function(k) {
+    byEmpresa[k].sort(function(a, b) {
+      if (currentSort === 'fecha') {
+        var da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        var db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da;
+      } else if (currentSort === 'estado') {
+        return (a.active === b.active) ? 0 : (a.active ? 1 : -1);
+      } else if (currentSort === 'uso') {
+        return b.activations - a.activations;
+      }
+      return a.id.localeCompare(b.id);
+    });
+  });
+
+  document.getElementById('total-badge').textContent = '— ' + filtered.length + ' licencias en ' + empresaKeys.length + ' empresas';
+  renderEmpresas(byEmpresa, empresaKeys);
+}
+
+// ──────────────────────────────────────────
+//  RENDER EMPRESAS
+// ──────────────────────────────────────────
+var COLORS = ['#5a6070','#00e5b0','#f7c948','#ff3860','#00cfff','#8a94a8','#ff7043','#4caf50'];
+function getColor(name) {
+  var h = 0;
+  for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % COLORS.length;
+  return COLORS[h];
+}
+
+// Safe base64 encoding that handles non-ASCII characters (accents, ñ, etc.)
+function safeB64(str) {
+  try {
+    return btoa(unescape(encodeURIComponent(str))).replace(/=/g,'').replace(/[^A-Za-z0-9]/g,'_');
+  } catch(e) {
+    return str.replace(/[^A-Za-z0-9]/g,'_');
+  }
+}
+
+function renderEmpresas(byEmpresa, keys) {
+  var container = document.getElementById('empresas-list');
+  if (!keys.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gray2);padding:48px;font-family:\'Exo 2\',sans-serif">Sin resultados para los filtros aplicados.</div>';
+    return;
+  }
+
+  container.innerHTML = keys.map(function(empresa) {
+    var lics = byEmpresa[empresa];
+    var total = lics.length;
+    var activas = lics.filter(function(l){ return l.activations > 0 && l.active; }).length;
+    var sinUsar = lics.filter(function(l){ return l.activations === 0 && l.active; }).length;
+    var revocadas = lics.filter(function(l){ return !l.active; }).length;
+    var color = getColor(empresa);
+    var isOpen = expandedEmpresas[empresa] !== false; // default open
+    var initials = empresa.substring(0, 2).toUpperCase();
+
+    return '<div class="empresa-card" id="ecard-' + safeB64(empresa).replace(/=/g,'') + '">' +
+      // HEADER
+      '<div class="empresa-header" onclick="toggleEmpresa(\'' + empresa.replace(/'/g,"\\'") + '\')">' +
+        '<div class="empresa-name">' +
+          '<div class="empresa-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials + '</div>' +
+          empresa +
+          '<span style="font-size:10px;font-weight:600;color:var(--gray2);font-family:\'DM Sans\',sans-serif">' + total + ' licencias</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:16px">' +
+          '<div class="empresa-stats">' +
+            (activas > 0 ? '<div class="esta"><div class="esta-val" style="color:var(--green)">' + activas + '</div><div class="esta-lbl">Activas</div></div>' : '') +
+            (sinUsar > 0 ? '<div class="esta"><div class="esta-val" style="color:#8a94a8">' + sinUsar + '</div><div class="esta-lbl">Sin usar</div></div>' : '') +
+            (revocadas > 0 ? '<div class="esta"><div class="esta-val" style="color:var(--red)">' + revocadas + '</div><div class="esta-lbl">Revocadas</div></div>' : '') +
+          '</div>' +
+          '<span class="chevron' + (isOpen ? ' open' : '') + '" id="chevron-' + safeB64(empresa).replace(/=/g,'') + '">▾</span>' +
+        '</div>' +
+      '</div>' +
+      // BODY
+      '<div class="empresa-body' + (isOpen ? ' open' : '') + '" id="ebody-' + safeB64(empresa).replace(/=/g,'') + '">' +
+        // TOOLBAR
+        '<div class="empresa-toolbar">' +
+          '<span style="font-size:10px;color:var(--gray2)">' + total + ' códigos</span>' +
+          '<div class="empresa-toolbar-btns" style="display:flex;gap:7px">' +
+            '<button onclick="addClientToEmpresa(\'' + empresa.replace(/'/g,"\\'") + '\')" style="padding:6px 14px;font-size:10px;font-weight:700;background:linear-gradient(135deg,rgba(61,68,82,.4),rgba(124,58,237,.25));border:1px solid rgba(74,82,101,.6);color:#9aa5be;border-radius:8px;cursor:pointer;font-family:\'Exo 2\',sans-serif;letter-spacing:.3px" title="Agregar nuevo cliente a esta empresa">➕ Nuevo cliente</button>' +
+            '<button class="btn-copy" onclick="copyEmpresaCodes(\'' + empresa.replace(/'/g,"\\'") + '\')" style="padding:6px 12px;font-size:10px">📋 Copiar todos los códigos</button>' +
+          '</div>' +
+        '</div>' +
+        // HEADER ROW
+        '<div class="lic-row-header" style="display:grid;grid-template-columns:minmax(180px,1fr) 100px 130px 90px 130px 80px auto;gap:10px">' +
+          '<span>Código / Límites</span><span>Estado / Plan</span><span>Dispositivos</span><span class="hide-mob">Máx</span><span class="hide-mob">Creado</span><span class="hide-mob">EA Online</span><span>Acciones</span>' +
+        '</div>' +
+        // LICENSE ROWS
+        lics.map(function(l) { return renderLicRow(l); }).join('') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderLicRow(l) {
+  var statusTag = !l.active
+    ? '<span class="tag tag-r">● REVOCADA</span>'
+    : l.activations > 0
+      ? '<span class="tag tag-g">● ACTIVA</span>'
+      : '<span class="tag tag-gray">○ SIN USAR</span>';
+
+  // Plan badge
+  var planLabel = l.plan === 'vip' ? '👑 VIP' : l.plan === 'pro' ? '🔷 Pro' : '🔵 Basic';
+  var planClass = l.plan === 'vip' ? 'tag-vip' : l.plan === 'pro' ? 'tag-pro' : 'tag-basic';
+  var planTag = '<span class="tag ' + planClass + '" style="margin-top:4px;display:inline-flex">' + planLabel + '</span>';
+
+  // Masters / Followers
+  var mastersVal = l.maxMasters >= 999 ? '∞' : l.maxMasters;
+  var followersVal = l.maxFollowers >= 999 ? '∞' : l.maxFollowers;
+  var mfInfo = '<div style="font-size:10px;color:var(--gray2);margin-top:3px">'
+    + '<span style="color:var(--cyan)">M:</span> ' + mastersVal
+    + ' &nbsp;<span style="color:var(--green)">F:</span> ' + followersVal
+    + '</div>';
+
+  var devList = l.devices || [];
+  var devCount = devList.length || l.activations;
+  var actPct = l.maxActivations > 0 ? Math.min(Math.round((devCount/l.maxActivations)*100), 100) : 0;
+  var actColor = actPct >= 100 ? 'var(--red)' : actPct >= 50 ? 'var(--gold)' : 'var(--green)';
+
+  var devItems = '';
+  if (devList.length > 0) {
+    devItems = '<div style="margin-top:5px;display:flex;flex-direction:column;gap:3px;">';
+    devList.forEach(function(d, i) {
+      var shortId = d.length > 14 ? d.substring(0, 14) + '…' : d;
+      devItems += '<div style="display:flex;align-items:center;gap:5px;">'
+        + '<span style="font-family:JetBrains Mono,monospace;font-size:9px;color:var(--cyan);background:rgba(0,207,255,.08);padding:1px 5px;border-radius:4px;border:1px solid rgba(0,207,255,.15);" title="' + d + '">' + shortId + '</span>'
+        + '<button class="btn-del" onclick="removeOneDevice(\'' + l.id + '\',' + i + ')" style="padding:2px 5px;font-size:9px;" title="Eliminar este dispositivo">✕</button>'
+        + '</div>';
+    });
+    devItems += '</div>';
+  }
+
+  var devCol = '<div>' +
+    '<div style="font-size:11px;font-weight:700;color:' + actColor + ';font-family:\'Exo 2\',sans-serif">' + devCount + ' / ' + l.maxActivations + ' disp.</div>' +
+    '<div class="dev-bar"><div class="dev-fill" style="width:' + actPct + '%;background:' + actColor + '"></div></div>' +
+    devItems +
+  '</div>';
+
+  // Heartbeat
+  var hbText = '—';
+  var hbClass = 'hb-offline';
+  if (l.lastHeartbeat) {
+    var hbDate = new Date(l.lastHeartbeat);
+    var diffMin = Math.floor((Date.now() - hbDate.getTime()) / 60000);
+    if (diffMin < 60) {
+      hbText = diffMin === 0 ? 'Ahora' : diffMin + 'm ago';
+      hbClass = 'hb-online';
+    } else if (diffMin < 1440) {
+      hbText = Math.floor(diffMin/60) + 'h ago';
+    } else {
+      hbText = Math.floor(diffMin/1440) + 'd ago';
+    }
+  }
+  var hbCol = '<div class="' + hbClass + '" style="font-size:10px;font-family:\'JetBrains Mono\',monospace" title="Último heartbeat del EA">' + hbText + '</div>';
+
+  var createDate = l.createdAt ? new Date(l.createdAt).toLocaleDateString('es', {day:'2-digit',month:'short',year:'2-digit'}) : '—';
+
+  var actions = '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+    '<button class="btn-copy" onclick="copyText(\'' + l.id + '\', this)" title="Copiar código">📋</button>' +
+    (l.active
+      ? '<button class="btn-r" onclick="revokeLicense(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Revocar">🚫</button>'
+      : '<button class="btn-o" onclick="restoreLicense(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Restaurar">♻</button>') +
+    '<button class="btn-gray" onclick="resetActivation(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Reset TODOS los dispositivos">🔄</button>' +
+    '<button class="btn-gray" onclick="changeDeviceLimit(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px;border-color:rgba(77,159,255,.4);color:#4d9fff" title="Cambiar límite de dispositivos">⚙</button>' +
+    '<button class="btn-del" onclick="deleteLicense(\'' + l.id + '\')" title="Eliminar código permanentemente">🗑</button>' +
+  '</div>';
+
+  return '<div class="lic-row" id="lrow-' + l.id + '">' +
+    '<div class="code-col"><span class="code-val">' + l.id + '</span>' + mfInfo + '</div>' +
+    '<div>' + statusTag + '<br>' + planTag + '</div>' +
+    '<div>' + devCol + '</div>' +
+    '<div class="hide-mob" style="font-size:11px;color:var(--gray2)">' + l.maxActivations + ' disp.</div>' +
+    '<div class="hide-mob" style="font-size:11px;color:var(--gray2);font-family:\'JetBrains Mono\',monospace">' + createDate + '</div>' +
+    '<div class="hide-mob">' + hbCol + '</div>' +
+    '<div>' + actions + '</div>' +
+  '</div>';
+}
+
+// ──────────────────────────────────────────
+//  ELIMINAR UN DISPOSITIVO INDIVIDUAL — definido en el bloque modal al final
+// ──────────────────────────────────────────
+
+// ──────────────────────────────────────────
+//  TOGGLE EMPRESA
+// ──────────────────────────────────────────
+function toggleEmpresa(empresa) {
+  var key = safeB64(empresa).replace(/=/g,'');
+  var body = document.getElementById('ebody-' + key);
+  var chevron = document.getElementById('chevron-' + key);
+  if (!body) return;
+  var isOpen = body.classList.contains('open');
+  if (isOpen) {
+    body.classList.remove('open');
+    chevron.classList.remove('open');
+  } else {
+    body.classList.add('open');
+    chevron.classList.add('open');
+  }
+  expandedEmpresas[empresa] = !isOpen;
+}
+
+function copyEmpresaCodes(empresa) {
+  var lics = allLicenses.filter(function(l){ return l.reseller === empresa; });
+  var text = lics.map(function(l){ return l.id; }).join('\n');
+  copyText(text, null);
+  showToast('📋 ' + lics.length + ' códigos de ' + empresa + ' copiados', 'var(--green)');
+}
+
+// ──────────────────────────────────────────
+//  CREAR LICENCIAS
+// ──────────────────────────────────────────
+// ──────────────────────────────────────────
+//  PLAN SELECTOR — auto-rellena masters/followers
+// ──────────────────────────────────────────
+function onPlanChange() {
+  var plan = document.getElementById('new-plan').value;
+  var limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+  document.getElementById('new-masters').value   = limits.maxMasters >= 999 ? 999 : limits.maxMasters;
+  document.getElementById('new-followers').value = limits.maxFollowers >= 999 ? 999 : limits.maxFollowers;
+}
+
+async function createLicenses() {
+  var reseller = document.getElementById('new-reseller').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'');
+  var qty = parseInt(document.getElementById('new-qty').value) || 1;
+  var maxA = parseInt(document.getElementById('new-max').value) || 2;
+  var plan = document.getElementById('new-plan').value || 'basic';
+  var maxMasters   = parseInt(document.getElementById('new-masters').value)   || PLAN_LIMITS[plan].maxMasters;
+  var maxFollowers = parseInt(document.getElementById('new-followers').value) || PLAN_LIMITS[plan].maxFollowers;
+  var msgEl = document.getElementById('create-msg');
+  var codesBox = document.getElementById('new-codes-list');
+  var codesItems = document.getElementById('codes-items');
+
+  if (!reseller) { msgEl.innerHTML = '<span style="color:var(--red)">⚠ Ingresa el nombre del cliente</span>'; return; }
+  if (qty < 1 || qty > 100) { msgEl.innerHTML = '<span style="color:var(--red)">⚠ Cantidad entre 1 y 100</span>'; return; }
+
+  msgEl.innerHTML = '<span style="color:var(--gold)">⏳ Creando ' + qty + ' licencias [' + plan.toUpperCase() + '] para ' + reseller + '...</span>';
+  codesBox.style.display = 'none';
+  newCodesList = [];
+
+  var codes = [];
+  var errors = 0;
+
+  for (var i = 0; i < qty; i++) {
+    var code = reseller + '-' + String(Date.now()).slice(-6) + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+    var url = FB_BASE + '?documentId=' + encodeURIComponent(code) + '&key=' + FB_KEY;
+    try {
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          fields: {
+            reseller:      {stringValue: reseller},
+            active:        {booleanValue: true},
+            activations:   {integerValue: '0'},
+            maxActivations:{integerValue: String(maxA)},
+            plan:          {stringValue: plan},
+            maxMasters:    {integerValue: String(maxMasters)},
+            maxFollowers:  {integerValue: String(maxFollowers)},
+            createdAt:     {timestampValue: new Date().toISOString()},
+            activatedAt:   {nullValue: null},
+            lastDevice:    {stringValue: ''},
+            lastHeartbeat: {nullValue: null},
+            devices:       {arrayValue: {values: []}}
+          }
+        })
+      });
+      if (res.ok) codes.push(code);
+      else errors++;
+    } catch(e) { errors++; }
+    await new Promise(function(r){ setTimeout(r, 120); });
+  }
+
+  if (codes.length > 0) {
+    newCodesList = codes;
+    msgEl.innerHTML = '<span style="color:var(--green)">✅ ' + codes.length + ' licencias [' + plan.toUpperCase() + '] creadas para ' + reseller + (errors > 0 ? ' (' + errors + ' errores)' : '') + '</span>';
+    document.getElementById('codes-header-label').textContent = '— Códigos para ' + reseller + ' (' + codes.length + ')';
+    codesItems.innerHTML = codes.map(function(c) {
+      return '<div class="code-item">' +
+        '<span class="code-text">' + c + '</span>' +
+        '<button class="btn-copy" onclick="copyText(\'' + c + '\', this)">📋 Copiar</button>' +
+      '</div>';
+    }).join('');
+    codesBox.style.display = 'block';
+    expandedEmpresas[reseller] = true;
+    loadLicenses();
+  } else {
+    msgEl.innerHTML = '<span style="color:var(--red)">❌ Error al crear licencias. Verifica tu Firebase.</span>';
+  }
+}
+
+// ──────────────────────────────────────────
+//  ACCIONES — definidas en el bloque modal al final del archivo
+//  (revokeLicense, restoreLicense, resetActivation, deleteLicense)
+// ──────────────────────────────────────────
+
+// ──────────────────────────────────────────
+//  NUEVA MEJORA 2 — AGREGAR CLIENTE A EMPRESA EXISTENTE
+// ──────────────────────────────────────────
+function addClientToEmpresa(empresa) {
+  // Crear overlay con formulario rápido
+  var existing = document.getElementById('add-client-overlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  window._pendingEmpresa = empresa; // guardar para el botón generar
+  overlay.id = 'add-client-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(5,7,18,.7);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:#0e1229;border:1px solid #2a3260;border-radius:16px;padding:26px;width:400px;max-width:95vw;box-shadow:0 0 80px rgba(90,96,112,.2)">'
+    + '<div style="font-family:Exo 2,sans-serif;font-size:14px;font-weight:900;color:#e8ecf8;margin-bottom:4px">➕ Nuevo cliente</div>'
+    + '<div style="font-size:10px;color:#4d9fff;font-weight:700;font-family:JetBrains Mono,monospace;margin-bottom:18px;letter-spacing:1px">' + empresa + '</div>'
+    + '<div style="margin-bottom:12px">'
+      + '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:5px">Nombre / Etiqueta del cliente (opcional)</label>'
+      + '<input id="add-client-label" type="text" placeholder="Ej: Juan Pérez — Principal" maxlength="30"'
+      + ' style="width:100%;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:8px;padding:9px 12px;font-size:12px;font-family:DM Sans,sans-serif;outline:none;box-sizing:border-box">'
+    + '</div>'
+    + '<div style="margin-bottom:18px">'
+      + '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:5px">Dispositivos permitidos</label>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+        + [1,2,3,5,10,'∞'].map(function(n){
+            return '<button onclick="selectDevOpt(this,'+( n==='∞'?999:n)+')" data-val="'+( n==='∞'?999:n)+'"'
+              + ' style="flex:1;min-width:40px;padding:7px 5px;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:Exo 2,sans-serif;transition:all .15s">'+n+'</button>';
+          }).join('')
+      + '</div>'
+      + '<input id="add-client-max" type="hidden" value="2">'
+    + '</div>'
+    + '<div id="add-client-msg" style="font-size:11px;min-height:16px;margin-bottom:10px"></div>'
+    + '<div style="display:flex;gap:8px">'
+      + '<button onclick="closeAddClientOverlay()" style="flex:1;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:9px;padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Exo 2\',sans-serif">Cancelar</button>'
+      + '<button onclick="window._pendingEmpresa && confirmAddClient(window._pendingEmpresa)" style="flex:2;background:linear-gradient(135deg,#3d4452,#4a5265);color:#fff;border:none;border-radius:9px;padding:11px;font-size:12px;font-weight:900;cursor:pointer;font-family:\'Exo 2\',sans-serif;box-shadow:0 4px 16px rgba(90,96,112,.35)">✅ Generar código</button>'
+    + '</div>'
+  + '</div>';
+  document.body.appendChild(overlay);
+
+  // Preseleccionar opción 2
+  setTimeout(function(){
+    var btns = overlay.querySelectorAll('[data-val]');
+    btns.forEach(function(b){
+      if(b.dataset.val === '2'){
+        b.style.background = 'linear-gradient(135deg,#3d4452,#4a5265)';
+        b.style.color = '#fff';
+        b.style.borderColor = '#4a5265';
+      }
+    });
+    var lbl = document.getElementById('add-client-label');
+    if(lbl) lbl.focus();
+  }, 50);
+}
+
+function closeLimitEditOverlay(){
+  // Buscar cualquier overlay de edición de límite activo
+  document.querySelectorAll('[id^="limit-edit-"]').forEach(function(el){ el.remove(); });
+}
+
+function closeAddClientOverlay(){
+  var o = document.getElementById('add-client-overlay');
+  if(o) o.remove();
+}
+
+function selectDevOpt(btn, val) {
+  // Desmarcar todos
+  var parent = btn.parentNode;
+  Array.from(parent.querySelectorAll('button')).forEach(function(b){
+    b.style.background = '#111627';
+    b.style.color = '#7a85a8';
+    b.style.borderColor = '#2a3260';
+  });
+  // Marcar este
+  btn.style.background = 'linear-gradient(135deg,#3d4452,#4a5265)';
+  btn.style.color = '#fff';
+  btn.style.borderColor = '#4a5265';
+  var hidden = document.getElementById('add-client-max');
+  if(hidden) hidden.value = val;
+}
+
+async function confirmAddClient(empresa) {
+  var labelInput = document.getElementById('add-client-label');
+  var maxInput   = document.getElementById('add-client-max');
+  var msgEl      = document.getElementById('add-client-msg');
+  var maxA = parseInt(maxInput ? maxInput.value : '2') || 2;
+
+  msgEl.innerHTML = '<span style="color:var(--gold)">⏳ Creando licencia para ' + empresa + '...</span>';
+
+  // Generar código igual que createLicenses
+  var code = empresa + '-' + String(Date.now()).slice(-6) + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+  var url = FB_BASE + '?documentId=' + encodeURIComponent(code) + '&key=' + FB_KEY;
+
+  try {
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        fields: {
+          reseller:     {stringValue: empresa},
+          active:       {booleanValue: true},
+          activations:  {integerValue: '0'},
+          maxActivations:{integerValue: String(maxA)},
+          createdAt:    {timestampValue: new Date().toISOString()},
+          activatedAt:  {nullValue: null},
+          lastDevice:   {stringValue: ''},
+          devices:      {arrayValue: {values: []}},
+          clientLabel:  {stringValue: (labelInput ? labelInput.value.trim() : '')}
+        }
+      })
+    });
+
+    if (res.ok) {
+      var overlay = document.getElementById('add-client-overlay');
+      if (overlay) overlay.remove();
+      showToast('✅ Código creado: ' + code, 'var(--green)');
+      expandedEmpresas[empresa] = true;
+      loadLicenses();
+    } else {
+      msgEl.innerHTML = '<span style="color:var(--red)">❌ Error al crear. Intenta de nuevo.</span>';
+    }
+  } catch(e) {
+    msgEl.innerHTML = '<span style="color:var(--red)">❌ Sin conexión: ' + e.message + '</span>';
+  }
+}
+
+async function patchLicense(id, fields) {
+  var fieldPaths = Object.keys(fields).map(function(k){ return '&updateMask.fieldPaths=' + k; }).join('');
+  var url = FB_BASE + '/' + encodeURIComponent(id) + '?key=' + FB_KEY + fieldPaths;
+  try {
+    await fetch(url, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({fields: fields})
+    });
+  } catch(e) { alert('Error al actualizar: ' + e.message); }
+}
+
+
+// Enter en login
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL DE CONFIRMACIÓN CUSTOM
+     Reemplaza confirm() nativo que puede estar bloqueado
+     por el browser (GitHub Pages, file://, iframes, etc.)
+══════════════════════════════════════════════════════ -->
+<div id="adm-confirm-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(5,7,18,.92);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#0e1229;border:1px solid #2a3260;border-radius:18px;padding:28px 28px 22px;max-width:420px;width:92%;box-shadow:0 0 80px rgba(90,96,112,.18);">
+    <div id="adm-confirm-icon" style="font-size:32px;margin-bottom:10px;text-align:center;"></div>
+    <div id="adm-confirm-title" style="font-family:Exo 2,sans-serif;font-size:16px;font-weight:900;color:#e8ecf8;margin-bottom:10px;text-align:center;"></div>
+    <div id="adm-confirm-body" style="font-size:12px;color:#7a85a8;line-height:1.85;margin-bottom:22px;white-space:pre-line;text-align:center;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="adm-confirm-cancel" onclick="document.getElementById('adm-confirm-modal').style.display='none'" style="flex:1;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:Exo 2,sans-serif;">Cancelar</button>
+      <button id="adm-confirm-ok" style="flex:1;border-radius:10px;padding:12px;font-size:13px;font-weight:900;cursor:pointer;font-family:Exo 2,sans-serif;border:none;letter-spacing:.5px;"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Cerrar modal con Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var m = document.getElementById('adm-confirm-modal');
+      if (m) m.style.display = 'none';
+    }
+  });
+})();
+
+function admConfirm(opts) {
+  var modal   = document.getElementById('adm-confirm-modal');
+  var iconEl  = document.getElementById('adm-confirm-icon');
+  var titleEl = document.getElementById('adm-confirm-title');
+  var bodyEl  = document.getElementById('adm-confirm-body');
+  var okBtn   = document.getElementById('adm-confirm-ok');
+
+  iconEl.textContent  = opts.icon  || '❓';
+  titleEl.textContent = opts.title || '¿Confirmar?';
+  bodyEl.textContent  = opts.body  || '';
+  okBtn.textContent   = opts.okLabel || 'Confirmar';
+  okBtn.style.background = opts.okBg  || 'linear-gradient(135deg,#3d4452,#5a6070)';
+  okBtn.style.color      = opts.okColor || '#fff';
+  okBtn.style.boxShadow  = opts.okShadow || '0 4px 16px rgba(90,96,112,.35)';
+
+  modal.style.display = 'flex';
+
+  // Clonar botón OK para limpiar listeners anteriores
+  var newOk = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOk, okBtn);
+  newOk.style.background = opts.okBg || 'linear-gradient(135deg,#3d4452,#5a6070)';
+  newOk.style.color = opts.okColor || '#fff';
+  newOk.style.boxShadow = opts.okShadow || '0 4px 16px rgba(90,96,112,.35)';
+  newOk.textContent = opts.okLabel || 'Confirmar';
+
+  newOk.addEventListener('click', function() {
+    modal.style.display = 'none';
+    if (typeof opts.onConfirm === 'function') opts.onConfirm();
+  });
+}
+
+// ──────────────────────────────────────────
+//  ACCIONES CON MODAL PROPIO (sin confirm nativo)
+// ──────────────────────────────────────────
+async function revokeLicense(id) {
+  admConfirm({
+    icon: '🚫',
+    title: 'Revocar Licencia',
+    body: id + '\n\n• Usuario bloqueado en ≤30s\n• App se congela sin borrar datos\n• Sus datos en Supabase se conservan\n• Para restaurar usa el botón ♻',
+    okLabel: '🚫 REVOCAR',
+    okBg: 'linear-gradient(135deg,#cc1a40,#ff3860)',
+    okShadow: '0 4px 16px rgba(255,56,96,.35)',
+    onConfirm: async function() {
+      await patchLicense(id, {active: {booleanValue: false}});
+      showToast('🚫 Revocada: ' + id, 'var(--red)');
+      loadLicenses();
+    }
+  });
+}
+
+async function restoreLicense(id) {
+  admConfirm({
+    icon: '♻',
+    title: 'Restaurar Licencia',
+    body: id + '\n\n• El usuario recuperará acceso de inmediato\n• Sus datos se conservan intactos',
+    okLabel: '♻ RESTAURAR',
+    okBg: 'linear-gradient(135deg,#00a87a,#00e5b0)',
+    okColor: '#000',
+    okShadow: '0 4px 16px rgba(0,229,176,.35)',
+    onConfirm: async function() {
+      await patchLicense(id, {active: {booleanValue: true}});
+      showToast('✅ Restaurada: ' + id, 'var(--green)');
+      loadLicenses();
+    }
+  });
+}
+
+async function resetActivation(id) {
+  admConfirm({
+    icon: '🔄',
+    title: 'Resetear Dispositivos',
+    body: id + '\n\n• Se eliminan TODOS los dispositivos registrados\n• Usuario bloqueado en ≤30s\n• Al reingresar código se registra SIN consumir cupo extra\n• Datos del journal conservados intactos',
+    okLabel: '🔄 RESETEAR',
+    okBg: 'linear-gradient(135deg,#0e7490,#00cfff)',
+    okColor: '#000',
+    okShadow: '0 4px 16px rgba(0,207,255,.3)',
+    onConfirm: async function() {
+      await patchLicense(id, {
+        activations: {integerValue: '0'},
+        lastDevice: {stringValue: ''},
+        activatedAt: {nullValue: null},
+        devices: {arrayValue: {values: []}}
+      });
+      showToast('🔄 Dispositivos reseteados: ' + id, 'var(--cyan)');
+      loadLicenses();
+    }
+  });
+}
+
+async function deleteLicense(id) {
+  admConfirm({
+    icon: '🗑',
+    title: 'Eliminar Código Permanentemente',
+    body: id + '\n\n⚠ Esta acción NO se puede deshacer\n• El código se borra de Firebase para siempre\n• Los datos del journal en Supabase NO se borran',
+    okLabel: '🗑 ELIMINAR PARA SIEMPRE',
+    okBg: 'linear-gradient(135deg,#7f1d1d,#ff3860)',
+    okShadow: '0 4px 16px rgba(255,56,96,.4)',
+    onConfirm: async function() {
+      var url = FB_BASE + '/' + encodeURIComponent(id) + '?key=' + FB_KEY;
+      try {
+        var res = await fetch(url, { method: 'DELETE' });
+        if (res.ok || res.status === 200) {
+          showToast('🗑 Eliminado: ' + id, 'var(--gold)');
+          allLicenses = allLicenses.filter(function(l){ return l.id !== id; });
+          updateKPIs(); updateFilters(); applyFilters();
+        } else {
+          showToast('❌ Error al eliminar: ' + res.status, 'var(--red)');
+        }
+      } catch(e) { showToast('❌ Sin conexión', 'var(--red)'); }
+    }
+  });
+}
+
+// ──────────────────────────────────────────
+//  NUEVA MEJORA 1 — GESTIÓN DE LÍMITE DE DISPOSITIVOS
+// ──────────────────────────────────────────
+
+// Aumentar límite o quitar restricción en una licencia existente
+async function changeDeviceLimit(id) {
+  var lic = allLicenses.find(function(l){ return l.id === id; });
+  if (!lic) return;
+
+  var currentLimit = lic.maxActivations;
+  var currentDevs  = (lic.devices || []).length || lic.activations;
+
+  admConfirm({
+    icon: '⚙️',
+    title: 'Cambiar Límite de Dispositivos',
+    body: id + '\n\nActual: ' + currentDevs + ' / ' + currentLimit + ' dispositivos\n\nIngresa el nuevo límite en el campo\n(0 = Ilimitado)',
+    okLabel: '✏ ABRIR EDITOR',
+    okBg: 'linear-gradient(135deg,#0e7490,#4d9fff)',
+    okShadow: '0 4px 16px rgba(77,159,255,.3)',
+    onConfirm: function() {
+      window._pendingLimitId = id;
+      // Abrir modal de edición inline
+      var rowEl = document.getElementById('lrow-' + id);
+      if (!rowEl) { showToast('❌ Fila no encontrada', 'var(--red)'); return; }
+
+      // Crear mini-form inline sobre la fila
+      var overlay = document.createElement('div');
+      overlay.id = 'limit-edit-' + id;
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(5,7,18,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+      overlay.innerHTML = '<div style="background:#0e1229;border:1px solid #2a3260;border-radius:14px;padding:24px;width:360px;max-width:94vw;box-shadow:0 0 60px rgba(77,159,255,.2)">'
+        + '<div style="font-family:Exo 2,sans-serif;font-size:13px;font-weight:800;color:#e8ecf8;margin-bottom:6px">⚙️ Límite de dispositivos</div>'
+        + '<div style="font-size:10px;color:#7a85a8;margin-bottom:14px;font-family:JetBrains Mono,monospace">' + id + '</div>'
+        + '<div style="font-size:11px;color:#9aa5c8;margin-bottom:8px">Límite actual: <b style="color:#4d9fff">' + currentLimit + '</b> &nbsp;|&nbsp; Dispositivos activos: <b style="color:#00e5b0">' + currentDevs + '</b></div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:8px">'
+          + '<input id="new-limit-input" type="number" min="0" placeholder="Nuevo límite (0 = ilimitado)" value="' + (currentLimit >= 999 ? 0 : currentLimit) + '"'
+          + ' style="flex:1;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:8px;padding:9px 12px;font-size:13px;font-family:JetBrains Mono,monospace;outline:none">'
+          + '<button onclick="document.getElementById(\'new-limit-input\').value=0" style="background:linear-gradient(135deg,rgba(74,82,101,.4),rgba(90,96,112,.3));border:1px solid rgba(74,82,101,.7);color:#9aa5be;border-radius:8px;padding:9px 12px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">∞ Ilimitado</button>'
+        + '</div>'
+        + '<div style="font-size:10px;color:#7a85a8;margin-bottom:14px">💡 Escribe 0 o presiona ∞ Ilimitado para quitar la restricción</div>'
+        + '<div style="display:flex;gap:8px">'
+          + '<button onclick="closeLimitEditOverlay()" style="flex:1;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Exo 2\',sans-serif">Cancelar</button>'
+          + '<button onclick="applyDeviceLimit(window._pendingLimitId)" style="flex:1;background:linear-gradient(135deg,#0e7490,#4d9fff);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:900;cursor:pointer;font-family:\'Exo 2\',sans-serif">✅ Aplicar</button>'
+        + '</div>'
+      + '</div>';
+      document.body.appendChild(overlay);
+      setTimeout(function(){ var inp = document.getElementById('new-limit-input'); if(inp){inp.focus();inp.select();} }, 50);
+    }
+  });
+}
+
+async function applyDeviceLimit(id) {
+  var overlay = document.getElementById('limit-edit-' + id);
+  var input   = document.getElementById('new-limit-input');
+  if (!input) return;
+  var newLimit = parseInt(input.value);
+  if (isNaN(newLimit) || newLimit < 0) { showToast('❌ Ingresa un número válido (0 o más)', 'var(--red)'); return; }
+  if (overlay) overlay.remove();
+
+  // newLimit === 0 → representar como 999 (ilimitado práctico)
+  var storedLimit = newLimit === 0 ? 999 : newLimit;
+  await patchLicense(id, { maxActivations: {integerValue: String(storedLimit)} });
+  showToast('✅ Límite actualizado: ' + (newLimit === 0 ? 'Ilimitado' : newLimit + ' disp.'), 'var(--green)');
+  loadLicenses();
+}
+
+async function removeOneDevice(licId, deviceIndex) {
+  var lic = allLicenses.find(function(l){ return l.id === licId; });
+  if (!lic || !lic.devices) return;
+  var devId = lic.devices[deviceIndex];
+  if (!devId) return;
+  var shortDev = devId.length > 22 ? devId.substring(0,22)+'…' : devId;
+  admConfirm({
+    icon: '📱',
+    title: 'Eliminar Dispositivo',
+    body: 'Licencia: ' + licId + '\nDispositivo: ' + shortDev + '\n\n• Ese dispositivo queda bloqueado en ≤30s\n• Los demás dispositivos NO se afectan',
+    okLabel: '✕ ELIMINAR DISPOSITIVO',
+    okBg: 'linear-gradient(135deg,#92400e,#f7c948)',
+    okColor: '#000',
+    okShadow: '0 4px 16px rgba(247,201,72,.3)',
+    onConfirm: async function() {
+      var newDevices = lic.devices.filter(function(_, i){ return i !== deviceIndex; });
+      await patchLicense(licId, {
+        devices: {arrayValue: {values: newDevices.map(function(d){ return {stringValue: d}; })}},
+        activations: {integerValue: String(newDevices.length)},
+        lastDevice: {stringValue: newDevices.length > 0 ? newDevices[newDevices.length-1] : ''}
+      });
+      showToast('✅ Dispositivo eliminado de ' + licId, 'var(--gold)');
+      loadLicenses();
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  PWA — MANIFEST + SERVICE WORKER
+// ══════════════════════════════════════════════════
+(function initPWA() {
+  // Manifest dinámico
+  var manifest = {
+    name: 'CopyTrade MT5 Pro Admin',
+    short_name: 'CT Admin',
+    description: 'Panel de administración CopyTrade MT5 Pro',
+    start_url: './',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#07091a',
+    theme_color: '#07091a',
+    icons: [
+      { src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#0e1229"/><text x="96" y="128" font-size="110" text-anchor="middle" fill="#00cfff">⚡</text></svg>'), sizes: '192x192', type: 'image/svg+xml' },
+      { src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#0e1229"/><text x="256" y="340" font-size="300" text-anchor="middle" fill="#00cfff">⚡</text></svg>'), sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  var blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  var mUrl = URL.createObjectURL(blob);
+  var link = document.getElementById('tt-admin-manifest');
+  if (link) link.href = mUrl;
+
+  // Service Worker inline para cache offline
+  if ('serviceWorker' in navigator) {
+    var swCode = `
+const CACHE = 'tt-admin-v1';
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.add('/')));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+`;
+    var swBlob = new Blob([swCode], { type: 'application/javascript' });
+    var swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).then(function(reg) {
+      console.log('[TT Admin] SW registrado');
+    }).catch(function(err) {
+      console.warn('[TT Admin] SW error:', err);
+    });
+  }
+})();
+
+</script>
+</body>
+</html>
