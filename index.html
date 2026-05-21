@@ -1039,12 +1039,17 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode 
    Modifica aquí solo la lógica de alto nivel y el ensamblado.
    ================================================================ */
 function CopyTradeApp() {
-  // ── Estado global ──
-  const [masters, setMasters]       = useState(DEMO_MASTERS);
-  const [activeMId, setActiveMId]   = useState(DEMO_MASTERS[0].id);
-  const [logs, setLogs]             = useState(DEMO_LOGS);
-  const [supaConfig, setSupaConfig] = useState({ url:"", key:"" });
-  const [demoMode, setDemoMode]     = useState(true);
+  // ── Cargar config guardada del navegador ──
+  const configGuardada = (() => {
+    try { return JSON.parse(localStorage.getItem("ct_supa") || "{}"); } catch { return {}; }
+  })();
+
+  // ── Estado global — arranca vacío, sin datos demo ──
+  const [masters, setMasters]       = useState([]);
+  const [activeMId, setActiveMId]   = useState(null);
+  const [logs, setLogs]             = useState([]);
+  const [supaConfig, setSupaConfig] = useState(configGuardada);
+  const [demoMode, setDemoMode]     = useState(!configGuardada?.url);
 
   // ── Estado de modales ──
   const [modal, setModal]               = useState(null);
@@ -1216,10 +1221,11 @@ function CopyTradeApp() {
     return () => clearInterval(iv);
   }, [supaConfig, cargarDesdeSupabase]);
 
-  // ── Guardar config Supabase ──
+  // ── Guardar config Supabase en estado y localStorage ──
   const handleSupaSave = useCallback(cfg=>{
     setSupaConfig(cfg);
     setDemoMode(!cfg.url);
+    try { localStorage.setItem("ct_supa", JSON.stringify(cfg)); } catch{}
     cargarDesdeSupabase(cfg);
   },[cargarDesdeSupabase]);
 
