@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CopyTrade MT5 Pro</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#070b13;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;}
+    input,select,button{font-family:inherit;}
+    ::-webkit-scrollbar{width:6px;height:6px;}
+    ::-webkit-scrollbar-track{background:#0c1220;}
+    ::-webkit-scrollbar-thumb{background:#1c2d45;border-radius:3px;}
+    ::-webkit-scrollbar-thumb:hover{background:#24385a;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+
+/* ================================================================
+   § 1  TEMA Y CONFIGURACIÓN GLOBAL
+   ─────────────────────────────────────────────────────────────────
+   Modifica aquí colores, intervalos y parámetros del sistema.
+   NO toques otras secciones si solo quieres cambiar apariencia.
+   ================================================================ */
+const T = {
+  bg:          "#070b13",
+  card:        "#0c1220",
+  cardHover:   "#101829",
+  cardLight:   "#141f32",
+  cardMid:     "#1a2840",
+  border:      "#1c2d45",
+  borderLight: "#24385a",
+  text:        "#e8eef8",
+  textMuted:   "#4a6080",
+  textSec:     "#7a95b8",
+  accent:      "#2979ff",
+  accentLow:   "rgba(41,121,255,0.12)",
+  accentGlow:  "rgba(41,121,255,0.25)",
+  ok:          "#00e676",
+  okLow:       "rgba(0,230,118,0.10)",
+  warn:        "#ffab00",
+  warnLow:     "rgba(255,171,0,0.10)",
+  err:         "#ff3d5a",
+  errLow:      "rgba(255,61,90,0.10)",
+  purple:      "#7c4dff",
+  purpleLow:   "rgba(124,77,255,0.12)",
+};
+
+const CFG = {
+  PING_MS:     3500,    // ms entre actualizaciones de ping simulado
+  SIM_MS:      5000,    // ms entre variaciones de equity simuladas
+  MAX_LOGS:    100,     // máximo de entradas en log de operaciones
+  DEMO_MODE:   true,    // true = datos demo | false = solo Supabase
+};
+
+/* ================================================================
+   § 2  DATOS DEMO
+   ─────────────────────────────────────────────────────────────────
+   Datos de ejemplo visibles antes de conectar Supabase.
+   Reemplazados automáticamente al conectar base de datos real.
+   ================================================================ */
+const BROKERS_LIST = [
+  "IC Markets","Pepperstone","Eightcap","XM","FTMO",
+  "MyForexFunds","Deriv","Oanda","Exness","FxPro","Tickmill",
+];
+
+const DEMO_MASTERS = [
+  {
+    id:"MA-001", tag:"M1", name:"Master Account 1",
+    broker:"IC Markets", platform:"MT5", accountNum:"#MA-001",
+    status:"online", balance:25430.68, equity:25980.21,
+    openPnL:549.53, copierOn:true, readOnly:false, opsToday:18,
+    followers:[
+      { id:"F-001", tag:"R1", name:"Cuenta Real 1", accountNum:"#654321",
+        broker:"IC Markets", platform:"MT5", status:"connected",
+        balance:12540.75, capitalPct:50, riskPct:0.50, delayMs:0,
+        readOnly:false, enabled:true, ping:28, failedCopies:0, lastOp:"10:32:14" },
+      { id:"F-002", tag:"R2", name:"Cuenta Real 2", accountNum:"#654322",
+        broker:"IC Markets", platform:"MT5", status:"connected",
+        balance:7846.20, capitalPct:30, riskPct:1.00, delayMs:0,
+        readOnly:false, enabled:true, ping:32, failedCopies:0, lastOp:"10:32:15" },
+      { id:"F-003", tag:"R3", name:"Cuenta Real 3", accountNum:"#654323",
+        broker:"IC Markets", platform:"MT5", status:"connected",
+        balance:5043.13, capitalPct:20, riskPct:0.25, delayMs:0,
+        readOnly:false, enabled:true, ping:24, failedCopies:0, lastOp:"10:32:15" },
+    ],
+  },
+  {
+    id:"MA-002", tag:"M2", name:"Master Account 2",
+    broker:"Pepperstone", platform:"MT5", accountNum:"#MA-002",
+    status:"online", balance:18200.00, equity:18750.30,
+    openPnL:550.30, copierOn:true, readOnly:false, opsToday:12,
+    followers:[],
+  },
+  {
+    id:"MA-003", tag:"M3", name:"Master Account 3",
+    broker:"Eightcap", platform:"MT4", accountNum:"#MA-003",
+    status:"paused", balance:32100.00, equity:32100.00,
+    openPnL:0, copierOn:false, readOnly:false, opsToday:0,
+    followers:[],
+  },
+];
+
+const DEMO_LOGS = [
+  { id:1,  ts:"10:32:15", masterId:"MA-001", masterName:"Master Account 1", follower:"Cuenta Real 1", type:"COPY",  symbol:"NAS100", dir:"BUY",  lots:"0.05", status:"ok"   },
+  { id:2,  ts:"10:32:15", masterId:"MA-001", masterName:"Master Account 1", follower:"Cuenta Real 2", type:"COPY",  symbol:"NAS100", dir:"BUY",  lots:"0.10", status:"ok"   },
+  { id:3,  ts:"10:32:15", masterId:"MA-001", masterName:"Master Account 1", follower:"Cuenta Real 3", type:"COPY",  symbol:"NAS100", dir:"BUY",  lots:"0.02", status:"ok"   },
+  { id:4,  ts:"09:15:30", masterId:"MA-001", masterName:"Master Account 1", follower:"Cuenta Real 2", type:"CLOSE", symbol:"NAS100", dir:"BUY",  lots:"0.10", status:"ok"   },
+  { id:5,  ts:"09:14:22", masterId:"MA-001", masterName:"Master Account 1", follower:"Cuenta Real 1", type:"COPY",  symbol:"NAS100", dir:"SELL", lots:"0.05", status:"fail" },
+  { id:6,  ts:"08:55:10", masterId:"MA-002", masterName:"Master Account 2", follower:"—",             type:"COPY",  symbol:"EURUSD", dir:"BUY",  lots:"0.20", status:"ok"   },
+];
+
+/* ================================================================
+   § 3  UTILIDADES
+   ─────────────────────────────────────────────────────────────────
+   Funciones de formato y helpers reutilizables.
+   ================================================================ */
+const fmt$   = n => `$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const fmtPct = n => `${(+n).toFixed(2)}%`;
+const nowTs  = () => new Date().toLocaleTimeString("es",{hour12:false});
+const uid    = () => Math.random().toString(36).slice(2,8).toUpperCase();
+const statusLabel = s => s==="online"||s==="connected" ? "En línea" : s==="paused" ? "Pausada" : "Desconectada";
+const statusClr   = s => s==="online"||s==="connected" ? T.ok : s==="paused" ? T.warn : T.err;
+
+/* ================================================================
+   § 4  CONEXIÓN A SUPABASE
+   ─────────────────────────────────────────────────────────────────
+   Cliente ligero para Supabase REST API.
+   Cada usuario conecta su propia cuenta gratuita.
+   No modifiques esto a menos que cambies el backend.
+   ================================================================ */
+const makeSupaClient = (url, key) => {
+  if (!url || !key) return null;
+  const h = {
+    "apikey": key,
+    "Authorization": `Bearer ${key}`,
+    "Content-Type": "application/json",
+  };
+  const base = `${url}/rest/v1`;
+  return {
+    url, key,
+    get:    async (t,q="")  => { try { const r=await fetch(`${base}/${t}?${q}`,{headers:h}); return r.ok?r.json():null; } catch{return null;} },
+    post:   async (t,b)     => { try { const r=await fetch(`${base}/${t}`,{method:"POST",headers:{...h,"Prefer":"return=representation"},body:JSON.stringify(b)}); return r.ok?r.json():null; } catch{return null;} },
+    patch:  async (t,q,b)   => { try { const r=await fetch(`${base}/${t}?${q}`,{method:"PATCH",headers:{...h,"Prefer":"return=representation"},body:JSON.stringify(b)}); return r.ok?r.json():null; } catch{return null;} },
+    delete: async (t,q)     => { try { const r=await fetch(`${base}/${t}?${q}`,{method:"DELETE",headers:h}); return r.ok; } catch{return false;} },
+  };
+};
+
+/* ================================================================
+   § 5  COMPONENTES BASE
+   ─────────────────────────────────────────────────────────────────
+   Btn, Badge, Toggle, StatusDot, Modal, Input, Select, Field
+   Solo modifica aquí si quieres cambiar el estilo de los controles
+   base sin afectar la lógica de negocio.
+   ================================================================ */
+
+/* — Botón — */
+const Btn = ({ children, onClick, variant="primary", size="md", disabled=false, sx={} }) => {
+  const base = {
+    cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.45:1,
+    border:"none", borderRadius:8, fontWeight:700,
+    display:"inline-flex", alignItems:"center", gap:5, transition:"all 0.15s",
+    fontFamily:"inherit",
+    fontSize: size==="sm"?11:size==="lg"?15:13,
+    padding:  size==="sm"?"5px 11px":size==="lg"?"11px 22px":"7px 15px",
+    letterSpacing:"0.2px",
+  };
+  const variants = {
+    primary: { background:T.accent,    color:"#fff",   boxShadow:`0 0 14px ${T.accentGlow}` },
+    danger:  { background:T.errLow,    color:T.err,    border:`1px solid ${T.err}35` },
+    success: { background:T.okLow,     color:T.ok,     border:`1px solid ${T.ok}35`  },
+    ghost:   { background:"transparent",color:T.textSec,border:`1px solid ${T.border}` },
+    dark:    { background:T.cardLight,  color:T.text,   border:`1px solid ${T.border}` },
+    warn:    { background:T.warnLow,   color:T.warn,   border:`1px solid ${T.warn}35` },
+  };
+  return (
+    <button style={{...base,...variants[variant],...sx}} onClick={disabled?undefined:onClick}>
+      {children}
+    </button>
+  );
+};
+
+/* — Badge — */
+const Badge = ({ label, color }) => (
+  <span style={{
+    fontSize:10, fontWeight:800, padding:"2px 7px", borderRadius:20,
+    background:`${color}18`, color, border:`1px solid ${color}38`,
+    letterSpacing:"0.6px", textTransform:"uppercase", whiteSpace:"nowrap",
+  }}>{label}</span>
+);
+
+/* — Toggle switch — */
+const Toggle = ({ on, onChange, size="md" }) => {
+  const w=size==="sm"?32:40, h=size==="sm"?18:22, d=h-4;
+  return (
+    <div onClick={()=>onChange(!on)} style={{
+      width:w, height:h, borderRadius:h/2, cursor:"pointer",
+      background:on?T.accent:T.border, transition:"background 0.2s",
+      position:"relative", flexShrink:0,
+    }}>
+      <div style={{
+        position:"absolute", top:2, left:on?w-d-2:2,
+        width:d, height:d, borderRadius:"50%", background:"#fff",
+        transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.5)",
+      }}/>
+    </div>
+  );
+};
+
+/* — Punto de estado — */
+const Dot = ({ status }) => (
+  <span style={{
+    width:7, height:7, borderRadius:"50%",
+    background:statusClr(status), display:"inline-block", flexShrink:0,
+    boxShadow:`0 0 6px ${statusClr(status)}90`,
+  }}/>
+);
+
+/* — Separador — */
+const Sep = ({ my=12 }) => <div style={{height:1, background:T.border, margin:`${my}px 0`}}/>;
+
+/* — Tooltip info — */
+const InfoTip = ({ text }) => (
+  <span title={text} style={{
+    width:13, height:13, borderRadius:"50%", background:T.cardLight,
+    color:T.textSec, fontSize:8, fontWeight:800,
+    display:"inline-flex", alignItems:"center", justifyContent:"center",
+    cursor:"help", flexShrink:0, border:`1px solid ${T.border}`,
+  }}>i</span>
+);
+
+/* — Overlay de modal — */
+const ModalWrap = ({ onClose, children, maxW=500 }) => (
+  <div onClick={onClose} style={{
+    position:"fixed", inset:0, background:"rgba(0,0,0,0.80)",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    zIndex:1000, padding:20, backdropFilter:"blur(3px)",
+  }}>
+    <div onClick={e=>e.stopPropagation()} style={{
+      background:T.card, border:`1px solid ${T.borderLight}`,
+      borderRadius:16, width:"100%", maxWidth:maxW,
+      maxHeight:"90vh", overflowY:"auto", padding:28, position:"relative",
+      boxShadow:"0 24px 80px rgba(0,0,0,0.7)",
+    }}>
+      {children}
+    </div>
+  </div>
+);
+
+/* — Título de modal — */
+const ModalHd = ({ title, onClose }) => (
+  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+    <h3 style={{margin:0, color:T.text, fontSize:17, fontWeight:800}}>{title}</h3>
+    <button onClick={onClose} style={{
+      background:"none", border:"none", color:T.textMuted,
+      cursor:"pointer", fontSize:22, lineHeight:1, padding:4,
+    }}>×</button>
+  </div>
+);
+
+/* — Campo de formulario — */
+const Field = ({ label, children, half=false }) => (
+  <div style={{marginBottom:13, width:half?"48%":"100%"}}>
+    <label style={{display:"block",color:T.textSec,fontSize:11,marginBottom:5,fontWeight:700,letterSpacing:"0.5px",textTransform:"uppercase"}}>
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+/* — Input de texto — */
+const Inp = ({ value, onChange, placeholder, type="text", min, max, step }) => (
+  <input type={type} value={value} min={min} max={max} step={step}
+    onChange={e=>onChange(e.target.value)}
+    placeholder={placeholder}
+    style={{
+      width:"100%", background:T.cardLight, border:`1px solid ${T.border}`,
+      borderRadius:8, padding:"9px 12px", color:T.text, fontSize:13,
+      outline:"none", boxSizing:"border-box", fontFamily:"inherit",
+      transition:"border 0.15s",
+    }}
+  />
+);
+
+/* — Select — */
+const Sel = ({ value, onChange, options }) => (
+  <select value={value} onChange={e=>onChange(e.target.value)} style={{
+    width:"100%", background:T.cardLight, border:`1px solid ${T.border}`,
+    borderRadius:8, padding:"9px 12px", color:T.text, fontSize:13,
+    outline:"none", appearance:"none", cursor:"pointer", fontFamily:"inherit",
+  }}>
+    {options.map(o=><option key={o} value={o}>{o}</option>)}
+  </select>
+);
+
+/* — Info banner — */
+const Banner = ({ color, children }) => (
+  <div style={{
+    background:`${color}12`, border:`1px solid ${color}30`,
+    borderRadius:10, padding:"12px 14px", marginBottom:14,
+    fontSize:12, color, lineHeight:1.7,
+  }}>{children}</div>
+);
+
+/* ================================================================
+   § 6  LOGO COPYTRADE
+   ─────────────────────────────────────────────────────────────────
+   Solo modifica si quieres cambiar el branding del encabezado.
+   ================================================================ */
+const Logo = () => (
+  <div style={{display:"flex", alignItems:"center", gap:10}}>
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+      <rect width="38" height="38" rx="11" fill={T.accentLow} stroke={T.accent} strokeWidth="1.2"/>
+      <path d="M14 19L19 11L24 19L19 27Z" fill={T.accent}/>
+      <path d="M9.5 19L14.5 11L19.5 19L14.5 27Z" fill={T.accent} fillOpacity="0.4"/>
+      <circle cx="24" cy="19" r="3" fill={T.ok} fillOpacity="0.8"/>
+    </svg>
+    <div>
+      <div style={{color:T.text, fontWeight:900, fontSize:18, letterSpacing:"-0.5px", lineHeight:1}}>CopyTrade</div>
+      <div style={{color:T.textMuted, fontSize:10, letterSpacing:"1px", textTransform:"uppercase"}}>MT5 Pro</div>
+    </div>
+  </div>
+);
+
+/* ================================================================
+   § 7  MODAL — NUEVA CUENTA MAESTRA
+   ─────────────────────────────────────────────────────────────────
+   Formulario para agregar una cuenta maestra.
+   Al confirmar simula conexión y auto-detecta el balance via EA.
+   ================================================================ */
+const ModalNewMaster = ({ onClose, onAdd }) => {
+  const [f, setF] = useState({ name:"", broker:BROKERS_LIST[0], platform:"MT5", accountNum:"", connecting:false });
+  const set = k => v => setF(p=>({...p,[k]:v}));
+
+  const handleConnect = () => {
+    if (!f.name || !f.accountNum) return;
+    setF(p=>({...p, connecting:true}));
+    // Simula detección automática de balance via EA (en producción: llega de Supabase)
+    setTimeout(() => {
+      onAdd({
+        id:`MA-${uid()}`, tag:`M${Math.floor(Math.random()*90)+10}`,
+        name:f.name, broker:f.broker, platform:f.platform, accountNum:f.accountNum,
+        status:"online",
+        balance:  +(10000 + Math.random()*40000).toFixed(2),
+        equity:   +(10000 + Math.random()*40000).toFixed(2),
+        openPnL:  +((Math.random()-0.3)*800).toFixed(2),
+        copierOn:true, readOnly:false, opsToday:0, followers:[],
+      });
+      onClose();
+    }, 2200);
+  };
+
+  return (
+    <ModalWrap onClose={onClose}>
+      <ModalHd title="+ Nueva cuenta maestra" onClose={onClose}/>
+      <Field label="Nombre de la cuenta">
+        <Inp value={f.name} onChange={set("name")} placeholder="Ej: Cuenta FTMO Principal"/>
+      </Field>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="Broker" half><Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/></Field>
+        <Field label="Plataforma" half><Sel value={f.platform} onChange={set("platform")} options={["MT5","MT4"]}/></Field>
+      </div>
+      <Field label="Número de cuenta MT5">
+        <Inp value={f.accountNum} onChange={set("accountNum")} placeholder="#12345678"/>
+      </Field>
+      <Banner color={T.accent}>
+        <b>📡 Conexión automática via EA:</b><br/>
+        1. Instala el <b>EA Maestro</b> en tu MT5<br/>
+        2. El EA detecta el balance, equity y operaciones en tiempo real<br/>
+        3. Envía los datos a tu Supabase configurado en § 4<br/>
+        4. El estado cambiará a <b style={{color:T.ok}}>En línea</b> automáticamente
+      </Banner>
+      {f.connecting && (
+        <div style={{textAlign:"center", padding:"12px 0", color:T.accent, fontWeight:700}}>
+          ⟳ Conectando y detectando balance...
+        </div>
+      )}
+      <div style={{display:"flex", gap:10, justifyContent:"flex-end", marginTop:4}}>
+        <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+        <Btn variant="primary" onClick={handleConnect} disabled={!f.name||!f.accountNum||f.connecting}>
+          {f.connecting ? "Conectando..." : "Conectar cuenta"}
+        </Btn>
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 8  MODAL — NUEVA CUENTA RECEPTORA
+   ─────────────────────────────────────────────────────────────────
+   Formulario para agregar una cuenta follower a una maestra.
+   Al conectar, auto-detecta el balance de esa cuenta MT5.
+   ================================================================ */
+const ModalNewFollower = ({ masterId, onClose, onAdd }) => {
+  const [f, setF] = useState({
+    name:"", broker:BROKERS_LIST[0], platform:"MT5", accountNum:"",
+    capitalPct:50, riskPct:0.50, delayMs:0, readOnly:false, connecting:false,
+  });
+  const set = k => v => setF(p=>({...p,[k]:v}));
+
+  const handleAdd = () => {
+    if (!f.name || !f.accountNum) return;
+    setF(p=>({...p, connecting:true}));
+    setTimeout(() => {
+      const num = f.accountNum.replace(/\D/g,"").slice(-2)||"01";
+      onAdd(masterId, {
+        id:`F-${uid()}`, tag:`R${num}`,
+        name:f.name, broker:f.broker, platform:f.platform, accountNum:f.accountNum,
+        status:"connected",
+        balance:  +(5000 + Math.random()*25000).toFixed(2),
+        capitalPct:+f.capitalPct, riskPct:+f.riskPct, delayMs:+f.delayMs,
+        readOnly:f.readOnly, enabled:true,
+        ping: 15+Math.round(Math.random()*55), failedCopies:0, lastOp:"—",
+      });
+      onClose();
+    }, 1800);
+  };
+
+  return (
+    <ModalWrap onClose={onClose}>
+      <ModalHd title="+ Nueva cuenta receptora" onClose={onClose}/>
+      <Field label="Nombre de la cuenta">
+        <Inp value={f.name} onChange={set("name")} placeholder="Ej: Cuenta FTMO Follower"/>
+      </Field>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="Broker" half><Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/></Field>
+        <Field label="Plataforma" half><Sel value={f.platform} onChange={set("platform")} options={["MT5","MT4"]}/></Field>
+      </div>
+      <Field label="Número de cuenta MT5">
+        <Inp value={f.accountNum} onChange={set("accountNum")} placeholder="#12345678"/>
+      </Field>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="% Asignación capital" half>
+          <Inp type="number" value={f.capitalPct} onChange={set("capitalPct")} min={1} max={100} step={1} placeholder="50"/>
+        </Field>
+        <Field label="% Riesgo por operación" half>
+          <Inp type="number" value={f.riskPct} onChange={set("riskPct")} min={0.01} max={10} step={0.01} placeholder="0.50"/>
+        </Field>
+      </div>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="Delay de copia (ms)" half>
+          <Inp type="number" value={f.delayMs} onChange={set("delayMs")} min={0} max={5000} step={100} placeholder="0"/>
+        </Field>
+        <Field label="Modo solo lectura" half>
+          <div style={{display:"flex",alignItems:"center",gap:10,height:38,paddingLeft:4}}>
+            <Toggle on={f.readOnly} onChange={v=>set("readOnly")(v)} size="sm"/>
+            <span style={{color:T.textSec, fontSize:12}}>{f.readOnly?"Activo — no ejecuta":"Desactivado"}</span>
+          </div>
+        </Field>
+      </div>
+      <Banner color={T.ok}>
+        Al conectar, el balance se detectará automáticamente desde MT5 via EA Follower.<br/>
+        El lote copiado = lote_master × (balance × {f.capitalPct}% / balance_master)
+      </Banner>
+      {f.connecting && (
+        <div style={{textAlign:"center", padding:"10px 0", color:T.ok, fontWeight:700}}>
+          ⟳ Detectando cuenta y balance...
+        </div>
+      )}
+      <div style={{display:"flex", gap:10, justifyContent:"flex-end"}}>
+        <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+        <Btn variant="primary" onClick={handleAdd} disabled={!f.name||!f.accountNum||f.connecting}>
+          {f.connecting ? "Conectando..." : "Agregar cuenta"}
+        </Btn>
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 9  MODAL — EDITAR CUENTA RECEPTORA
+   ─────────────────────────────────────────────────────────────────
+   Permite modificar configuración de un follower existente.
+   ================================================================ */
+const ModalEditFollower = ({ follower, onClose, onSave }) => {
+  const [f, setF] = useState({...follower});
+  const set = k => v => setF(p=>({...p,[k]:v}));
+  return (
+    <ModalWrap onClose={onClose}>
+      <ModalHd title="✏️  Editar cuenta receptora" onClose={onClose}/>
+      <Field label="Nombre de la cuenta">
+        <Inp value={f.name} onChange={set("name")}/>
+      </Field>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="Broker" half><Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/></Field>
+        <Field label="Plataforma" half><Sel value={f.platform} onChange={set("platform")} options={["MT5","MT4"]}/></Field>
+      </div>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="% Capital" half>
+          <Inp type="number" value={f.capitalPct} onChange={set("capitalPct")} min={1} max={100}/>
+        </Field>
+        <Field label="% Riesgo/op" half>
+          <Inp type="number" value={f.riskPct} onChange={set("riskPct")} min={0.01} max={10} step={0.01}/>
+        </Field>
+      </div>
+      <div style={{display:"flex", gap:12}}>
+        <Field label="Delay (ms)" half>
+          <Inp type="number" value={f.delayMs} onChange={set("delayMs")} min={0} max={5000} step={100}/>
+        </Field>
+        <Field label="Solo lectura" half>
+          <div style={{display:"flex",alignItems:"center",gap:10,height:38,paddingLeft:4}}>
+            <Toggle on={f.readOnly} onChange={v=>set("readOnly")(v)} size="sm"/>
+            <span style={{color:T.textSec, fontSize:12}}>{f.readOnly?"Sí":"No"}</span>
+          </div>
+        </Field>
+      </div>
+      <div style={{display:"flex", gap:10, justifyContent:"flex-end"}}>
+        <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+        <Btn variant="primary" onClick={()=>{onSave(f);onClose();}}>Guardar cambios</Btn>
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 10  MODAL — CONFIGURACIÓN SUPABASE
+   ─────────────────────────────────────────────────────────────────
+   Cada usuario conecta su propio proyecto Supabase gratuito.
+   Costo: $0 para ti y $0 para el usuario.
+   ================================================================ */
+const ModalSupabase = ({ config, onClose, onSave }) => {
+  const [url, setUrl] = useState(config?.url||"");
+  const [key, setKey] = useState(config?.key||"");
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const testConn = async () => {
+    setTesting(true); setResult(null);
+    try {
+      const r = await fetch(`${url}/rest/v1/`, { headers:{"apikey":key,"Authorization":`Bearer ${key}`} });
+      setResult(r.ok ? "ok" : "fail");
+    } catch { setResult("fail"); }
+    setTesting(false);
+  };
+
+  return (
+    <ModalWrap onClose={onClose}>
+      <ModalHd title="⚙️  Configuración Supabase" onClose={onClose}/>
+      <Banner color={T.accent}>
+        <b>Modelo de infraestructura:</b> Cada usuario usa su propia cuenta de Supabase gratuita.
+        Tu costo mensual = <b>$0</b>. El usuario no paga nada adicional.
+      </Banner>
+      <Field label="URL del proyecto Supabase">
+        <Inp value={url} onChange={setUrl} placeholder="https://xxxxxxxxxxxx.supabase.co"/>
+      </Field>
+      <Field label="Clave anon (pública)">
+        <Inp value={key} onChange={setKey} placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."/>
+      </Field>
+      <div style={{fontSize:12, color:T.textMuted, marginBottom:14, lineHeight:1.7}}>
+        Encuéntralas en: <b style={{color:T.accent}}>Supabase → Project Settings → API</b>
+      </div>
+      {result==="ok"   && <Banner color={T.ok}><b>✓ Conexión exitosa.</b> El dashboard está listo para usar con tu Supabase.</Banner>}
+      {result==="fail" && <Banner color={T.err}><b>✗ Error de conexión.</b> Verifica la URL y la clave anon.</Banner>}
+      <div style={{display:"flex", gap:10, justifyContent:"flex-end"}}>
+        <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+        <Btn variant="dark" onClick={testConn} disabled={!url||!key||testing}>
+          {testing ? "⟳ Probando..." : "Probar conexión"}
+        </Btn>
+        <Btn variant="primary" onClick={()=>{onSave({url,key});onClose();}} disabled={!url||!key}>
+          Guardar y conectar
+        </Btn>
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 11  MODAL — LOG DE OPERACIONES
+   ─────────────────────────────────────────────────────────────────
+   Historial completo de copias, cierres y errores.
+   Se puede filtrar por maestra o ver todo el historial.
+   ================================================================ */
+const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => {
+  const [search, setSearch] = useState("");
+  let filtered = logs;
+  if (filterMasterId) filtered = filtered.filter(l=>l.masterId===filterMasterId);
+  if (filterFollower) filtered = filtered.filter(l=>l.follower===filterFollower);
+  if (search) {
+    const s = search.toLowerCase();
+    filtered = filtered.filter(l=>
+      l.symbol?.toLowerCase().includes(s) ||
+      l.follower?.toLowerCase().includes(s) ||
+      l.masterName?.toLowerCase().includes(s) ||
+      l.type?.toLowerCase().includes(s) ||
+      l.dir?.toLowerCase().includes(s) ||
+      l.status?.toLowerCase().includes(s)
+    );
+  }
+  return (
+    <ModalWrap onClose={onClose} maxW={680}>
+      <ModalHd title={title||"📋 Log de operaciones"} onClose={onClose}/>
+      <Inp value={search} onChange={setSearch} placeholder="Buscar por símbolo, follower, tipo..."/>
+      <div style={{marginTop:12, overflowY:"auto", maxHeight:420}}>
+        {/* Encabezado tabla */}
+        <div style={{
+          display:"grid", gridTemplateColumns:"55px 70px 70px 55px 1fr 55px 55px 60px",
+          gap:8, padding:"7px 10px",
+          background:T.cardLight, borderRadius:"8px 8px 0 0",
+          fontSize:10, fontWeight:800, color:T.textMuted, letterSpacing:"0.5px", textTransform:"uppercase",
+        }}>
+          {["Hora","Maestra","Tipo","Dir","Follower","Símbolo","Lotes","Estado"].map(h=>(
+            <span key={h}>{h}</span>
+          ))}
+        </div>
+        {filtered.length===0 ? (
+          <div style={{textAlign:"center", padding:"30px 0", color:T.textMuted, fontSize:13}}>
+            Sin operaciones registradas
+          </div>
+        ) : filtered.map(l=>(
+          <div key={l.id} style={{
+            display:"grid", gridTemplateColumns:"55px 70px 70px 55px 1fr 55px 55px 60px",
+            gap:8, padding:"8px 10px",
+            borderBottom:`1px solid ${T.border}`,
+            background: l.status==="fail" ? T.errLow : "transparent",
+            fontSize:12, alignItems:"center",
+          }}>
+            <span style={{color:T.textMuted, fontFamily:"monospace"}}>{l.ts}</span>
+            <span style={{color:T.textSec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}} title={l.masterName}>
+              {l.masterName?.split(" ").slice(-1)[0]}
+            </span>
+            <Badge label={l.type} color={l.type==="COPY"?T.accent:l.type==="CLOSE"?T.warn:T.purple}/>
+            <Badge label={l.dir||"—"} color={l.dir==="BUY"?T.ok:l.dir==="SELL"?T.err:T.textMuted}/>
+            <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{l.follower}</span>
+            <span style={{color:T.text, fontWeight:700}}>{l.symbol}</span>
+            <span style={{color:T.textSec, fontFamily:"monospace"}}>{l.lots}</span>
+            <Badge label={l.status==="ok"?"✓ OK":"✗ FAIL"} color={l.status==="ok"?T.ok:T.err}/>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:12, fontSize:12, color:T.textMuted, textAlign:"right"}}>
+        {filtered.length} entrada(s) mostrada(s)
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 12  COMPONENTE — TAB DE CUENTA MAESTRA
+   ─────────────────────────────────────────────────────────────────
+   Tarjeta en la fila superior. Activa al hacer click.
+   ================================================================ */
+const MasterTab = ({ master, active, onClick }) => (
+  <div onClick={onClick} style={{
+    background: active ? T.cardMid : T.card,
+    border: `1px solid ${active ? T.accent+"70" : T.border}`,
+    borderRadius:14, padding:"14px 18px", cursor:"pointer",
+    minWidth:210, flexShrink:0, transition:"all 0.18s",
+    boxShadow: active ? `0 0 24px ${T.accentGlow}` : "none",
+    position:"relative", overflow:"hidden",
+  }}>
+    {active && (
+      <div style={{
+        position:"absolute", top:0, left:0, right:0, height:2,
+        background:`linear-gradient(90deg, ${T.accent}, ${T.ok})`,
+      }}/>
+    )}
+    <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:7}}>
+      <div style={{
+        width:36, height:36, borderRadius:10, flexShrink:0,
+        background: active ? `linear-gradient(135deg,${T.accent},${T.purple})` : T.cardLight,
+        display:"flex", alignItems:"center", justifyContent:"center",
+        fontWeight:900, fontSize:13, color:active?"#fff":T.textSec,
+        boxShadow: active ? `0 0 12px ${T.accentGlow}` : "none",
+      }}>{master.tag}</div>
+      <div style={{minWidth:0}}>
+        <div style={{color:T.text, fontWeight:700, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+          {master.name}
+        </div>
+        <div style={{display:"flex", alignItems:"center", gap:5, marginTop:2}}>
+          <Dot status={master.status}/>
+          <span style={{color:statusClr(master.status), fontSize:11, fontWeight:600}}>
+            {statusLabel(master.status)}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
+      {[master.broker, master.platform, master.accountNum].map((t,i)=>(
+        <span key={i} style={{color:T.textMuted, fontSize:10}}>{i>0?"• ":""}{t}</span>
+      ))}
+    </div>
+  </div>
+);
+
+/* ================================================================
+   § 13  COMPONENTE — BARRA DE ESTADÍSTICAS DE MAESTRA
+   ─────────────────────────────────────────────────────────────────
+   Muestra balance, equity, P&L, número de seguidores y ops del día.
+   Los valores se actualizan en tiempo real desde el EA via Supabase.
+   ================================================================ */
+const StatCell = ({ label, value, color, note }) => (
+  <div style={{flex:1, minWidth:120}}>
+    <div style={{color:T.textMuted, fontSize:10, marginBottom:4, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.6px"}}>
+      {label}
+    </div>
+    <div style={{color:color||T.text, fontSize:22, fontWeight:900, letterSpacing:"-0.5px", fontFamily:"monospace"}}>
+      {value}
+    </div>
+    {note && <div style={{color:T.textMuted, fontSize:10, marginTop:3}}>{note}</div>}
+  </div>
+);
+
+const VertDivider = () => (
+  <div style={{width:1, background:T.border, margin:"0 18px", alignSelf:"stretch"}}/>
+);
+
+const StatsBar = ({ master }) => (
+  <div style={{display:"flex", flexWrap:"wrap", gap:0, alignItems:"center"}}>
+    <StatCell label="Balance"         value={fmt$(master.balance)}/>
+    <VertDivider/>
+    <StatCell label="Equidad"         value={fmt$(master.equity)}/>
+    <VertDivider/>
+    <StatCell
+      label="P&L Abierto"
+      value={(master.openPnL>=0?"+":"")+fmt$(master.openPnL)}
+      color={master.openPnL>=0 ? T.ok : T.err}
+    />
+    <VertDivider/>
+    <StatCell
+      label="Copiando a"
+      value={`${master.followers.length} cuenta${master.followers.length!==1?"s":""}`}
+      color={T.accent}
+      note={`${master.followers.filter(f=>f.enabled).length} activa(s)`}
+    />
+    <VertDivider/>
+    <StatCell label="Operaciones copiadas hoy" value={master.opsToday} note="en todas las cuentas"/>
+  </div>
+);
+
+/* ================================================================
+   § 14  COMPONENTE — FILA DE CUENTA RECEPTORA
+   ─────────────────────────────────────────────────────────────────
+   Una fila por cada cuenta follower con sus controles.
+   Modifica solo esta sección para cambiar la tabla de followers.
+   ================================================================ */
+const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Cerrar menú al hacer click fuera
+  useEffect(()=>{
+    if (!menuOpen) return;
+    const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
+  return (
+    <div style={{
+      display:"grid", gridTemplateColumns:COLS, gap:12,
+      padding:"14px 18px", borderBottom:`1px solid ${T.border}`,
+      alignItems:"center",
+      background: follower.failedCopies>0 ? `${T.err}08` : "transparent",
+      opacity: follower.enabled ? 1 : 0.55,
+      transition:"opacity 0.2s",
+    }}>
+      {/* ─ Cuenta receptora ─ */}
+      <div style={{display:"flex", alignItems:"center", gap:10, minWidth:0}}>
+        <div style={{
+          width:34, height:34, borderRadius:9, flexShrink:0,
+          background:T.accentLow, border:`1px solid ${T.accent}35`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontWeight:900, fontSize:12, color:T.accent,
+        }}>{follower.tag}</div>
+        <div style={{minWidth:0}}>
+          <div style={{color:T.text, fontWeight:700, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+            {follower.name}
+          </div>
+          <div style={{color:T.textMuted, fontSize:11, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+            {follower.accountNum} • {follower.platform} • {follower.broker}
+          </div>
+          <div style={{display:"flex", gap:4, marginTop:3, flexWrap:"wrap"}}>
+            {follower.readOnly && <Badge label="Solo lectura" color={T.warn}/>}
+            {follower.delayMs>0 && <Badge label={`Delay ${follower.delayMs}ms`} color={T.purple}/>}
+            {!follower.enabled && <Badge label="Pausada" color={T.textMuted}/>}
+          </div>
+        </div>
+      </div>
+
+      {/* ─ Balance ─ */}
+      <div>
+        <div style={{color:T.text, fontWeight:800, fontSize:14, fontFamily:"monospace"}}>{fmt$(follower.balance)}</div>
+        {follower.failedCopies>0 && (
+          <div style={{color:T.err, fontSize:10, marginTop:3, fontWeight:700}}>
+            ⚠ {follower.failedCopies} copia(s) fallida(s)
+          </div>
+        )}
+      </div>
+
+      {/* ─ % Capital ─ */}
+      <div>
+        <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
+          <span style={{color:T.text, fontWeight:800, fontSize:13, fontFamily:"monospace"}}>
+            {follower.capitalPct}%
+          </span>
+        </div>
+        <div style={{height:4, background:T.border, borderRadius:2, overflow:"hidden"}}>
+          <div style={{
+            height:"100%", width:`${follower.capitalPct}%`,
+            background:`linear-gradient(90deg,${T.accent},${T.purple}50)`,
+            borderRadius:2, transition:"width 0.3s",
+          }}/>
+        </div>
+        <div style={{color:T.textMuted, fontSize:10, marginTop:3}}>
+          Lote ≈ lote_master × {follower.capitalPct/100}
+        </div>
+      </div>
+
+      {/* ─ Riesgo por operación ─ */}
+      <div style={{display:"flex", alignItems:"center", gap:5}}>
+        <button onClick={()=>onRisk(follower.id, Math.max(0.01, +(follower.riskPct-0.01).toFixed(2)))}
+          style={{width:24,height:24,borderRadius:6,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          −
+        </button>
+        <span style={{color:T.text, fontWeight:800, fontSize:13, minWidth:45, textAlign:"center", fontFamily:"monospace"}}>
+          {fmtPct(follower.riskPct)}
+        </span>
+        <button onClick={()=>onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2))}
+          style={{width:24,height:24,borderRadius:6,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          +
+        </button>
+      </div>
+
+      {/* ─ Estado y ping ─ */}
+      <div>
+        <div style={{display:"flex", alignItems:"center", gap:5, marginBottom:3}}>
+          <Dot status={follower.status}/>
+          <span style={{color:T.ok, fontSize:12, fontWeight:700}}>Conectada</span>
+        </div>
+        <div style={{color:T.textMuted, fontSize:11}}>Ping: <b style={{color:T.textSec}}>{follower.ping}ms</b></div>
+        <div style={{color:T.textMuted, fontSize:10, marginTop:1}}>Último: {follower.lastOp}</div>
+      </div>
+
+      {/* ─ Acciones ─ */}
+      <div style={{display:"flex", alignItems:"center", gap:8, position:"relative"}} ref={menuRef}>
+        <Toggle on={follower.enabled} onChange={()=>onToggle(follower.id)} size="sm"/>
+        <button onClick={()=>setMenuOpen(p=>!p)} style={{
+          width:28, height:28, borderRadius:6, border:`1px solid ${T.border}`,
+          background:T.cardLight, color:T.textSec, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
+        }}>⋮</button>
+        {menuOpen && (
+          <div style={{
+            position:"absolute", right:0, top:34,
+            background:T.card, border:`1px solid ${T.borderLight}`,
+            borderRadius:10, minWidth:165, zIndex:200, overflow:"hidden",
+            boxShadow:"0 12px 40px rgba(0,0,0,0.6)",
+          }}>
+            {[
+              { icon:"✏️", label:"Editar",         action:()=>{onEdit(follower);   setMenuOpen(false);}, color:T.text },
+              { icon:"📋", label:"Ver log",         action:()=>{onLog(follower);    setMenuOpen(false);}, color:T.text },
+              { icon:"🗑️", label:"Eliminar cuenta", action:()=>{onDelete(follower.id);setMenuOpen(false);}, color:T.err  },
+            ].map(item=>(
+              <div key={item.label} onClick={item.action} style={{
+                padding:"10px 14px", cursor:"pointer", color:item.color,
+                fontSize:13, display:"flex", alignItems:"center", gap:8,
+                transition:"background 0.1s",
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background=T.cardLight}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <span>{item.icon}</span>{item.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ================================================================
+   § 15  COMPONENTE — TABLA DE CUENTAS RECEPTORAS
+   ─────────────────────────────────────────────────────────────────
+   Encabezados de tabla + listado de FollowerRow.
+   Modifica aquí solo si quieres agregar/quitar columnas de la tabla.
+   ================================================================ */
+const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog }) => {
+  const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
+  const HEADERS = [
+    { label:"Cuenta Receptora" },
+    { label:"Balance" },
+    { label:"Asignación de capital", tip:"Porcentaje del capital de esta cuenta usado para copiar lotes." },
+    { label:"Riesgo por operación",  tip:"Porcentaje del balance arriesgado por operación copiada." },
+    { label:"Estado" },
+    { label:"Acciones" },
+  ];
+  return (
+    <div>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+        <div>
+          <h3 style={{margin:0, color:T.text, fontSize:15, fontWeight:800}}>
+            Cuentas que copian esta maestra
+          </h3>
+          <div style={{color:T.textMuted, fontSize:11, marginTop:3}}>
+            {master.followers.filter(f=>f.enabled).length} activas · {master.followers.filter(f=>!f.enabled).length} pausadas
+          </div>
+        </div>
+        <Btn variant="primary" onClick={()=>onAddFollower(master.id)} size="sm">
+          + Nueva cuenta receptora
+        </Btn>
+      </div>
+      <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:12, overflow:"hidden"}}>
+        {/* Encabezados */}
+        <div style={{
+          display:"grid", gridTemplateColumns:COLS, gap:12,
+          padding:"10px 18px", background:T.cardLight, borderBottom:`1px solid ${T.border}`,
+        }}>
+          {HEADERS.map(h=>(
+            <div key={h.label} style={{display:"flex", alignItems:"center", gap:5,
+              color:T.textMuted, fontSize:10, fontWeight:800,
+              textTransform:"uppercase", letterSpacing:"0.6px"}}>
+              {h.label}
+              {h.tip && <InfoTip text={h.tip}/>}
+            </div>
+          ))}
+        </div>
+        {/* Filas */}
+        {master.followers.length===0 ? (
+          <div style={{textAlign:"center", padding:"50px 20px", color:T.textMuted}}>
+            <div style={{fontSize:40, marginBottom:10}}>📡</div>
+            <div style={{fontWeight:700, fontSize:15, marginBottom:6, color:T.textSec}}>
+              Sin cuentas receptoras
+            </div>
+            <div style={{fontSize:13}}>
+              Agrega cuentas para comenzar a copiar operaciones
+            </div>
+            <div style={{marginTop:16}}>
+              <Btn variant="primary" onClick={()=>onAddFollower(master.id)}>
+                + Agregar primera cuenta
+              </Btn>
+            </div>
+          </div>
+        ) : master.followers.map(f=>(
+          <FollowerRow
+            key={f.id} follower={f}
+            onToggle={onToggle}
+            onRisk={onRisk}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onLog={onLog}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ================================================================
+   § 16  COMPONENTE — PANEL DE ALERTAS
+   ─────────────────────────────────────────────────────────────────
+   Aparece solo cuando hay copias fallidas o cuentas desconectadas.
+   Modifica solo aquí para cambiar el comportamiento de alertas.
+   ================================================================ */
+const AlertsPanel = ({ masters }) => {
+  const alerts = [];
+  masters.forEach(m=>{
+    m.followers.filter(f=>f.failedCopies>0).forEach(f=>{
+      alerts.push({ type:"failed", masterName:m.name, followerName:f.name, count:f.failedCopies });
+    });
+    m.followers.filter(f=>f.status!=="connected" && f.enabled).forEach(f=>{
+      alerts.push({ type:"offline", masterName:m.name, followerName:f.name });
+    });
+    if (m.status!=="online" && m.copierOn) {
+      alerts.push({ type:"master_offline", masterName:m.name });
+    }
+  });
+  if (alerts.length===0) return null;
+  return (
+    <div style={{
+      background:T.errLow, border:`1px solid ${T.err}40`,
+      borderRadius:12, padding:"12px 16px", marginBottom:18,
+    }}>
+      <div style={{color:T.err, fontWeight:800, fontSize:13, marginBottom:8}}>
+        ⚠ {alerts.length} alerta(s) activa(s)
+      </div>
+      {alerts.map((a,i)=>(
+        <div key={i} style={{color:T.err, fontSize:12, marginBottom:3, display:"flex", alignItems:"center", gap:6}}>
+          <span>•</span>
+          {a.type==="failed"        && <span><b>{a.followerName}</b> — {a.count} copia(s) fallida(s) en <b>{a.masterName}</b></span>}
+          {a.type==="offline"       && <span><b>{a.followerName}</b> desconectada (maestra: <b>{a.masterName}</b>)</span>}
+          {a.type==="master_offline"&& <span>Cuenta maestra <b>{a.masterName}</b> offline con copiadora activa</span>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ================================================================
+   § 17  COMPONENTE — HEADER PRINCIPAL
+   ─────────────────────────────────────────────────────────────────
+   Barra de navegación superior con logo y botones globales.
+   Modifica solo aquí para cambiar el encabezado.
+   ================================================================ */
+const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode }) => (
+  <div style={{
+    display:"flex", alignItems:"center", justifyContent:"space-between",
+    padding:"16px 28px", borderBottom:`1px solid ${T.border}`,
+    background:T.card, position:"sticky", top:0, zIndex:100,
+    backdropFilter:"blur(10px)",
+  }}>
+    <div>
+      <Logo/>
+      <div style={{color:T.textMuted, fontSize:11, marginTop:6, paddingLeft:48}}>
+        Gestiona tus cuentas maestras y las cuentas que copian sus operaciones.
+      </div>
+    </div>
+    <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+      {demoMode && (
+        <div style={{
+          background:T.warnLow, border:`1px solid ${T.warn}40`,
+          borderRadius:8, padding:"4px 10px", fontSize:11, color:T.warn, fontWeight:700,
+        }}>
+          🟡 Modo Demo
+        </div>
+      )}
+      <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Log global</Btn>
+      <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
+        {supaConfig?.url ? "🟢 Supabase" : "⚙️ Configurar Supabase"}
+      </Btn>
+      <Btn variant="primary" onClick={onAddMaster}>
+        + Nueva cuenta maestra
+      </Btn>
+    </div>
+  </div>
+);
+
+/* ================================================================
+   § 18  APP PRINCIPAL
+   ─────────────────────────────────────────────────────────────────
+   Estado global, handlers y composición de todos los componentes.
+   Modifica aquí solo la lógica de alto nivel y el ensamblado.
+   ================================================================ */
+function CopyTradeApp() {
+  // ── Estado global ──
+  const [masters, setMasters]       = useState(DEMO_MASTERS);
+  const [activeMId, setActiveMId]   = useState(DEMO_MASTERS[0].id);
+  const [logs, setLogs]             = useState(DEMO_LOGS);
+  const [supaConfig, setSupaConfig] = useState({ url:"", key:"" });
+  const [demoMode, setDemoMode]     = useState(true);
+
+  // ── Estado de modales ──
+  const [modal, setModal]               = useState(null);
+  const [editingFollower, setEditing]   = useState(null);
+  const [logFollowerFilter, setLogFilt] = useState(null);
+  const [addFollowerFor, setAddFor]     = useState(null);
+
+  const close  = () => { setModal(null); setEditing(null); setLogFilt(null); setAddFor(null); };
+  const activeMaster = masters.find(m=>m.id===activeMId) || masters[0];
+
+  // ── Simulación de ping en tiempo real ──
+  useEffect(()=>{
+    const iv = setInterval(()=>{
+      setMasters(p=>p.map(m=>({
+        ...m,
+        followers:m.followers.map(f=>({
+          ...f,
+          ping:Math.max(8, f.ping + Math.round((Math.random()-0.5)*10)),
+        })),
+      })));
+    }, CFG.PING_MS);
+    return ()=>clearInterval(iv);
+  }, []);
+
+  // ── Simulación de variación de equity (mercado abierto) ──
+  useEffect(()=>{
+    const iv = setInterval(()=>{
+      setMasters(p=>p.map(m=>m.status!=="online"?m:{
+        ...m,
+        equity:  +(m.equity  + (Math.random()-0.5)*25).toFixed(2),
+        openPnL: +(m.openPnL + (Math.random()-0.5)*18).toFixed(2),
+      }));
+    }, CFG.SIM_MS);
+    return ()=>clearInterval(iv);
+  }, []);
+
+  // ── Helpers para agregar entradas al log ──
+  const addLog = useCallback((entries) => {
+    setLogs(p=>[...entries,...p].slice(0, CFG.MAX_LOGS));
+  }, []);
+
+  // ── Handlers: cuentas maestras ──
+  const addMaster = useCallback(m=>{
+    setMasters(p=>[...p,m]);
+    setActiveMId(m.id);
+  },[]);
+
+  const toggleCopier = useCallback(mid=>{
+    setMasters(p=>p.map(m=>m.id===mid?{...m,copierOn:!m.copierOn}:m));
+  },[]);
+
+  // ── Handlers: cuentas receptoras ──
+  const addFollower = useCallback((mid,f)=>{
+    setMasters(p=>p.map(m=>m.id===mid?{...m,followers:[...m.followers,f]}:m));
+  },[]);
+
+  const toggleFollower = useCallback(fid=>{
+    setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,enabled:!f.enabled}:f)})));
+  },[]);
+
+  const updateRisk = useCallback((fid,val)=>{
+    setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,riskPct:val}:f)})));
+  },[]);
+
+  const saveFollower = useCallback(updated=>{
+    setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===updated.id?{...f,...updated}:f)})));
+  },[]);
+
+  const deleteFollower = useCallback(fid=>{
+    setMasters(p=>p.map(m=>({...m,followers:m.followers.filter(f=>f.id!==fid)})));
+  },[]);
+
+  // ── Handlers: acciones de cierre masivo ──
+  const doClose = (type) => {
+    if (!activeMaster) return;
+    const ts = nowTs();
+    const newLogs = activeMaster.followers.map((f,i)=>({
+      id:Date.now()+i, ts, masterId:activeMaster.id, masterName:activeMaster.name,
+      follower:f.name, type:"CLOSE",
+      symbol:"NAS100",
+      dir: type==="all"?"—":type==="pos"?"BUY":"SELL",
+      lots:"—", status:"ok",
+    }));
+    addLog(newLogs);
+    setMasters(p=>p.map(m=>m.id===activeMId?{
+      ...m,
+      openPnL: type==="all"?0:m.openPnL,
+      opsToday:m.opsToday+newLogs.length,
+    }:m));
+  };
+
+  // ── Guardar config Supabase ──
+  const handleSupaSave = useCallback(cfg=>{
+    setSupaConfig(cfg);
+    setDemoMode(!cfg.url);
+  },[]);
+
+  /* ── Render ── */
+  return (
+    <div style={{minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
+
+      {/* §17 Header */}
+      <Header
+        supaConfig={supaConfig}
+        demoMode={demoMode}
+        onOpenSupabase={()=>setModal("supabase")}
+        onAddMaster={()=>setModal("newMaster")}
+        onOpenLogs={()=>setModal("logs")}
+      />
+
+      {/* ── Contenido principal ── */}
+      <div style={{padding:"24px 28px", maxWidth:1400, margin:"0 auto"}}>
+
+        {/* §16 Alertas */}
+        <AlertsPanel masters={masters}/>
+
+        {/* ── Tabs de cuentas maestras ── */}
+        <div style={{display:"flex", gap:12, overflowX:"auto", paddingBottom:6, marginBottom:20}}>
+          {masters.map(m=>(
+            <MasterTab key={m.id} master={m} active={m.id===activeMId} onClick={()=>setActiveMId(m.id)}/>
+          ))}
+          {/* Tab "agregar nueva" */}
+          <div onClick={()=>setModal("newMaster")} style={{
+            minWidth:150, border:`2px dashed ${T.border}`, borderRadius:14,
+            display:"flex", flexDirection:"column", alignItems:"center",
+            justifyContent:"center", gap:5, cursor:"pointer",
+            color:T.textMuted, fontSize:12, padding:"14px 20px",
+            transition:"all 0.18s", flexShrink:0,
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent;e.currentTarget.style.color=T.accent;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.textMuted;}}>
+            <span style={{fontSize:24}}>+</span>
+            <span style={{fontWeight:600}}>Nueva cuenta maestra</span>
+          </div>
+        </div>
+
+        {/* ── Panel de cuenta maestra activa ── */}
+        {activeMaster && (
+          <div style={{
+            background:T.card, border:`1px solid ${T.border}`,
+            borderRadius:16, padding:"20px 24px", marginBottom:20,
+            position:"relative", overflow:"hidden",
+          }}>
+            {/* Línea de acento superior */}
+            <div style={{
+              position:"absolute", top:0, left:0, right:0, height:2,
+              background:`linear-gradient(90deg,${T.accent},${T.purple},${T.ok})`,
+            }}/>
+
+            {/* Header del panel */}
+            <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:18, flexWrap:"wrap", gap:12}}>
+              <div style={{display:"flex", alignItems:"center", gap:12}}>
+                <div style={{
+                  width:44, height:44, borderRadius:12, flexShrink:0,
+                  background:`linear-gradient(135deg,${T.accent},${T.purple})`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontWeight:900, fontSize:16, color:"#fff",
+                  boxShadow:`0 0 16px ${T.accentGlow}`,
+                }}>{activeMaster.tag}</div>
+                <div>
+                  <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                    <h2 style={{margin:0, fontSize:18, fontWeight:900, color:T.text}}>
+                      {activeMaster.name}
+                    </h2>
+                    <Dot status={activeMaster.status}/>
+                    <span style={{color:statusClr(activeMaster.status), fontSize:12, fontWeight:700}}>
+                      {statusLabel(activeMaster.status)}
+                    </span>
+                    {activeMaster.readOnly && <Badge label="Solo lectura" color={T.warn}/>}
+                  </div>
+                  <div style={{color:T.textMuted, fontSize:12, marginTop:3}}>
+                    {activeMaster.broker} · {activeMaster.platform} · {activeMaster.accountNum}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div style={{display:"flex", gap:7, flexWrap:"wrap", alignItems:"center"}}>
+                <Btn variant="dark"    onClick={()=>doClose("all")} size="sm">🕐 Cerrar todas</Btn>
+                <Btn variant="success" onClick={()=>doClose("pos")} size="sm">✅ Cerrar positivas</Btn>
+                <Btn variant="danger"  onClick={()=>doClose("neg")} size="sm">❌ Cerrar negativas</Btn>
+                <Btn variant="ghost"   onClick={()=>setModal("logs")} size="sm">📋 Log</Btn>
+                {/* Toggle copiadora */}
+                <div style={{
+                  display:"flex", alignItems:"center", gap:8,
+                  background:T.cardLight, border:`1px solid ${T.border}`,
+                  borderRadius:8, padding:"5px 12px",
+                }}>
+                  <span style={{color:T.textSec, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px"}}>
+                    Copiadora
+                  </span>
+                  <Toggle on={activeMaster.copierOn} onChange={()=>toggleCopier(activeMaster.id)} size="sm"/>
+                </div>
+              </div>
+            </div>
+
+            <Sep my={14}/>
+
+            {/* §13 Stats */}
+            <StatsBar master={activeMaster}/>
+          </div>
+        )}
+
+        {/* §15 Tabla de followers */}
+        {activeMaster && (
+          <FollowersTable
+            master={activeMaster}
+            onAddFollower={mid=>{ setAddFor(mid); setModal("newFollower"); }}
+            onToggle={toggleFollower}
+            onRisk={updateRisk}
+            onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
+            onDelete={deleteFollower}
+            onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
+          />
+        )}
+      </div>
+
+      {/* ================================================================
+          MODALES
+          Solo se renderiza uno a la vez.
+          ================================================================ */}
+
+      {/* §7 Nueva maestra */}
+      {modal==="newMaster" && (
+        <ModalNewMaster onClose={close} onAdd={addMaster}/>
+      )}
+
+      {/* §8 Nueva receptora */}
+      {modal==="newFollower" && (
+        <ModalNewFollower masterId={addFollowerFor} onClose={close} onAdd={addFollower}/>
+      )}
+
+      {/* §9 Editar receptora */}
+      {modal==="editFollower" && editingFollower && (
+        <ModalEditFollower follower={editingFollower} onClose={close} onSave={saveFollower}/>
+      )}
+
+      {/* §10 Configuración Supabase */}
+      {modal==="supabase" && (
+        <ModalSupabase config={supaConfig} onClose={close} onSave={handleSupaSave}/>
+      )}
+
+      {/* §11 Log global */}
+      {modal==="logs" && (
+        <ModalLogs
+          logs={logs}
+          filterMasterId={activeMaster?.id}
+          title={`📋 Log — ${activeMaster?.name}`}
+          onClose={close}
+        />
+      )}
+
+      {/* §11 Log por follower */}
+      {modal==="logFollower" && (
+        <ModalLogs
+          logs={logs}
+          filterFollower={logFollowerFilter}
+          title={`📋 Log — ${logFollowerFilter}`}
+          onClose={close}
+        />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement(CopyTradeApp)
+);
+</script>
+</body>
+</html>
