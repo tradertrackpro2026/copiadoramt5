@@ -1554,19 +1554,53 @@ function CopyTradeApp() {
   }, []);
 
   // ── Handlers: cuentas maestras ──
-  const addMaster = useCallback(m=>{
-    setMasters(p=>[...p,m]);
+  const addMaster = useCallback(async m => {
+    if (supaConfig?.url) {
+      const h = {
+        "apikey": supaConfig.key,
+        "Authorization": `Bearer ${supaConfig.key}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras`, {
+        method: "POST", headers: h,
+        body: JSON.stringify({
+          id: m.id, tag: m.tag, nombre: m.name,
+          broker: m.broker, plataforma: "MT5",
+          estado: "offline", balance: 0, equidad: 0,
+          pnl_abierto: 0, copiadora_on: true,
+        }),
+      });
+    }
+    setMasters(p=>[...p, m]);
     setActiveMId(m.id);
-  },[]);
+  }, [supaConfig]);
 
   const toggleCopier = useCallback(mid=>{
     setMasters(p=>p.map(m=>m.id===mid?{...m,copierOn:!m.copierOn}:m));
   },[]);
 
   // ── Handlers: cuentas receptoras ──
-  const addFollower = useCallback((mid,f)=>{
+  const addFollower = useCallback(async (mid, f) => {
+    if (supaConfig?.url) {
+      const h = {
+        "apikey": supaConfig.key,
+        "Authorization": `Bearer ${supaConfig.key}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_receptoras`, {
+        method: "POST", headers: h,
+        body: JSON.stringify({
+          id: f.id, maestra_id: mid, tag: f.tag,
+          nombre: f.name, broker: f.broker, plataforma: "MT5",
+          estado: "offline", balance: 0,
+          capital_pct: 50, riesgo_pct: 0.5, activa: true,
+        }),
+      });
+    }
     setMasters(p=>p.map(m=>m.id===mid?{...m,followers:[...m.followers,f]}:m));
-  },[]);
+  }, [supaConfig]);
 
   const toggleFollower = useCallback(fid=>{
     setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,enabled:!f.enabled}:f)})));
