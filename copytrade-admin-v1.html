@@ -861,6 +861,7 @@ function renderLicRow(l) {
       ? '<button class="btn-r" onclick="revokeLicense(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Revocar">🚫</button>'
       : '<button class="btn-o" onclick="restoreLicense(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Restaurar">♻</button>') +
     '<button class="btn-gray" onclick="resetActivation(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px" title="Reset TODOS los dispositivos">🔄</button>' +
+    '<button class="btn-gray" onclick="changePlan(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px;border-color:rgba(0,229,176,.4);color:#00e5b0" title="Editar plan y límites">✏️ Plan</button>' +
     '<button class="btn-gray" onclick="changeDeviceLimit(\'' + l.id + '\')" style="padding:4px 9px;font-size:10px;border-color:rgba(77,159,255,.4);color:#4d9fff" title="Cambiar límite de dispositivos">⚙</button>' +
     '<button class="btn-del" onclick="deleteLicense(\'' + l.id + '\')" title="Eliminar código permanentemente">🗑</button>' +
   '</div>';
@@ -1275,6 +1276,105 @@ async function deleteLicense(id) {
       } catch(e) { showToast('❌ Sin conexión', 'var(--red)'); }
     }
   });
+}
+
+// ──────────────────────────────────────────
+//  EDITAR PLAN Y LÍMITES DE UNA LICENCIA
+// ──────────────────────────────────────────
+function changePlan(id) {
+  var lic = allLicenses.find(function(l){ return l.id === id; });
+  if (!lic) return;
+
+  // Quitar overlay anterior si existe
+  var existing = document.getElementById('plan-edit-overlay');
+  if (existing) existing.remove();
+
+  var currentPlan    = lic.plan || 'basic';
+  var currentMasters = lic.maxMasters   >= 999 ? 0 : lic.maxMasters;
+  var currentFollows = lic.maxFollowers >= 999 ? 0 : lic.maxFollowers;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'plan-edit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(5,7,18,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;';
+
+  overlay.innerHTML =
+    '<div style="background:#0e1229;border:1px solid #2a3260;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 0 80px rgba(0,229,176,.12)">'
+    + '<div style="font-family:Exo 2,sans-serif;font-size:15px;font-weight:900;color:#e8ecf8;margin-bottom:4px">✏️ Editar Plan</div>'
+    + '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:#00e5b0;margin-bottom:20px;letter-spacing:1px">' + id + '</div>'
+
+    // Plan selector
+    + '<div style="margin-bottom:16px">'
+    +   '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:6px">Plan</label>'
+    +   '<select id="pe-plan" onchange="onPlanEditChange()" style="width:100%;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:9px;padding:10px 13px;font-size:13px;font-family:DM Sans,sans-serif;outline:none">'
+    +     '<option value="basic"'  + (currentPlan==='basic' ?' selected':'') + '>🔵 Basic — 1 maestra · 3 followers</option>'
+    +     '<option value="pro"'    + (currentPlan==='pro'   ?' selected':'') + '>🔷 Pro — 3 maestras · 10 followers</option>'
+    +     '<option value="vip"'    + (currentPlan==='vip'   ?' selected':'') + '>👑 VIP — Ilimitado</option>'
+    +     '<option value="custom"' + (currentPlan==='custom'?' selected':'') + '>⚙️ Personalizado</option>'
+    +   '</select>'
+    + '</div>'
+
+    // Maestras y followers
+    + '<div style="display:flex;gap:12px;margin-bottom:16px">'
+    +   '<div style="flex:1">'
+    +     '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:6px">Maestras (0=∞)</label>'
+    +     '<input id="pe-masters" type="number" min="0" max="999" value="' + currentMasters + '" style="width:100%;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:8px;padding:9px 12px;font-size:13px;font-family:JetBrains Mono,monospace;outline:none">'
+    +   '</div>'
+    +   '<div style="flex:1">'
+    +     '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:6px">Followers (0=∞)</label>'
+    +     '<input id="pe-followers" type="number" min="0" max="999" value="' + currentFollows + '" style="width:100%;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:8px;padding:9px 12px;font-size:13px;font-family:JetBrains Mono,monospace;outline:none">'
+    +   '</div>'
+    + '</div>'
+
+    + '<div style="font-size:10px;color:#7a85a8;margin-bottom:18px;line-height:1.7;background:#080b1c;border-radius:8px;padding:10px 12px">'
+    +   '💡 <b style="color:#9aa5c8">0 = Ilimitado</b> en maestras y followers.<br>'
+    +   'El cambio se aplica en el próximo heartbeat del EA (máx 30 min) o al reiniciar.'
+    + '</div>'
+
+    + '<div style="display:flex;gap:10px">'
+    +   '<button onclick="document.getElementById(\'plan-edit-overlay\').remove()" style="flex:1;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:9px;padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:Exo 2,sans-serif">Cancelar</button>'
+    +   '<button onclick="applyPlanEdit(\'' + id + '\')" style="flex:2;background:linear-gradient(135deg,#00a87a,#00e5b0);color:#000;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;font-family:Exo 2,sans-serif;box-shadow:0 4px 20px rgba(0,229,176,.3)">✅ Guardar cambios</button>'
+    + '</div>'
+  + '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function onPlanEditChange() {
+  var plan = document.getElementById('pe-plan').value;
+  var mEl  = document.getElementById('pe-masters');
+  var fEl  = document.getElementById('pe-followers');
+  if (!mEl || !fEl) return;
+  var limits = PLAN_LIMITS[plan];
+  if (limits) {
+    mEl.value = limits.maxMasters   >= 999 ? 0 : limits.maxMasters;
+    fEl.value = limits.maxFollowers >= 999 ? 0 : limits.maxFollowers;
+  }
+}
+
+async function applyPlanEdit(id) {
+  var plan    = document.getElementById('pe-plan').value;
+  var masters = parseInt(document.getElementById('pe-masters').value);
+  var follows = parseInt(document.getElementById('pe-followers').value);
+
+  if (isNaN(masters) || masters < 0) { showToast('❌ Maestras: número válido (0 o más)', 'var(--red)'); return; }
+  if (isNaN(follows) || follows < 0) { showToast('❌ Followers: número válido (0 o más)', 'var(--red)'); return; }
+
+  // 0 → 999 (ilimitado práctico)
+  var storedM = masters === 0 ? 999 : masters;
+  var storedF = follows === 0 ? 999 : follows;
+
+  var overlay = document.getElementById('plan-edit-overlay');
+  if (overlay) overlay.remove();
+
+  await patchLicense(id, {
+    plan:         { stringValue:  plan },
+    maxMasters:   { integerValue: String(storedM) },
+    maxFollowers: { integerValue: String(storedF) }
+  });
+
+  var planLabel = plan === 'vip' ? '👑 VIP' : plan === 'pro' ? '🔷 Pro' : plan === 'custom' ? '⚙️ Custom' : '🔵 Basic';
+  showToast('✅ Plan actualizado: ' + planLabel + ' | M:' + (storedM>=999?'∞':storedM) + ' F:' + (storedF>=999?'∞':storedF), 'var(--green)');
+  loadLicenses();
 }
 
 // ──────────────────────────────────────────
