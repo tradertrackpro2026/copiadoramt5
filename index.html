@@ -840,18 +840,18 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
     );
   }
   return (
-    <ModalWrap onClose={onClose} maxW={680}>
+    <ModalWrap onClose={onClose} maxW={760}>
       <ModalHd title={title||"📋 Log de operaciones"} onClose={onClose}/>
       <Inp value={search} onChange={setSearch} placeholder="Buscar por símbolo, follower, tipo..."/>
       <div style={{marginTop:12, overflowY:"auto", maxHeight:420}}>
         {/* Encabezado tabla */}
         <div style={{
-          display:"grid", gridTemplateColumns:"55px 70px 70px 55px 1fr 55px 55px 60px",
+          display:"grid", gridTemplateColumns:"50px 65px 65px 50px 1fr 55px 48px 48px 55px",
           gap:8, padding:"7px 10px",
           background:T.cardLight, borderRadius:"8px 8px 0 0",
           fontSize:10, fontWeight:800, color:T.textMuted, letterSpacing:"0.5px", textTransform:"uppercase",
         }}>
-          {["Hora","Maestra","Tipo","Dir","Follower","Símbolo","Lotes","Estado"].map(h=>(
+          {["Hora","Maestra","Tipo","Dir","Follower","Símbolo","L.Master","L.Copia","Estado"].map(h=>(
             <span key={h}>{h}</span>
           ))}
         </div>
@@ -861,7 +861,7 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
           </div>
         ) : filtered.map(l=>(
           <div key={l.id} style={{
-            display:"grid", gridTemplateColumns:"55px 70px 70px 55px 1fr 55px 55px 60px",
+            display:"grid", gridTemplateColumns:"50px 65px 65px 50px 1fr 55px 48px 48px 55px",
             gap:8, padding:"8px 10px",
             borderBottom:`1px solid ${T.border}`,
             background: l.status==="fail" ? T.errLow : "transparent",
@@ -875,7 +875,8 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
             <Badge label={l.dir||"—"} color={l.dir==="BUY"?T.ok:l.dir==="SELL"?T.err:T.textMuted}/>
             <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{l.follower}</span>
             <span style={{color:T.text, fontWeight:700}}>{l.symbol}</span>
-            <span style={{color:T.textSec, fontFamily:"monospace"}}>{l.lots}</span>
+            <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11}}>{l.lotsM||"—"}</span>
+            <span style={{color:T.textSec, fontFamily:"monospace", fontSize:11}}>{l.lots||"—"}</span>
             <Badge label={l.status==="ok"?"✓ OK":"✗ FAIL"} color={l.status==="ok"?T.ok:T.err}/>
           </div>
         ))}
@@ -1803,7 +1804,9 @@ function CopyTradeApp() {
   const deleteMaster = useCallback(async mid => {
     if (supaConfig?.url) {
       const h = { "apikey": supaConfig.key, "Authorization": `Bearer ${supaConfig.key}` };
-      await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras?id=eq.${mid}`, { method:"DELETE", headers:h });
+      // Borrar receptoras primero (evita huérfanas en Supabase)
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_receptoras?maestra_id=eq.${mid}`, { method:"DELETE", headers:h });
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras?id=eq.${mid}`,           { method:"DELETE", headers:h });
     }
     setMasters(p => {
       const filtered = sortById(p.filter(m => m.id !== mid));
@@ -1846,9 +1849,13 @@ function CopyTradeApp() {
     setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===updated.id?{...f,...updated}:f)})));
   },[]);
 
-  const deleteFollower = useCallback(fid=>{
+  const deleteFollower = useCallback(async fid => {
+    if (supaConfig?.url) {
+      const h = { "apikey": supaConfig.key, "Authorization": `Bearer ${supaConfig.key}` };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_receptoras?id=eq.${fid}`, { method:"DELETE", headers:h });
+    }
     setMasters(p=>p.map(m=>({...m,followers:m.followers.filter(f=>f.id!==fid)})));
-  },[]);
+  }, [supaConfig]);
 
   // ── Handlers: acciones de cierre masivo ──
   const doClose = (type) => {
@@ -1979,7 +1986,7 @@ function CopyTradeApp() {
       if (senalIds.length > 0) {
         const idsQuery = `(${senalIds.join(",")})`;
         const rS = await fetch(
-          `${cfg.url}/rest/v1/senales?id=in.${idsQuery}&select=id,tipo,simbolo,direccion`,
+          `${cfg.url}/rest/v1/senales?id=in.${idsQuery}&select=id,tipo,simbolo,direccion,lotes`,
           { headers: h }
         );
         if (rS.ok) {
@@ -2025,7 +2032,8 @@ function CopyTradeApp() {
           type:       senal.tipo      || "COPY",
           symbol:     senal.simbolo   || "—",
           dir:        senal.direccion || "—",
-          lots:       e.lotes_copiados ? String(parseFloat(e.lotes_copiados).toFixed(2)) : "—",
+          lotsM: senal.lotes ? String(parseFloat(senal.lotes).toFixed(2)) : "—",
+          lots:  e.lotes_copiados ? String(parseFloat(e.lotes_copiados).toFixed(2)) : "—",
           status:     e.estado === "ok" || e.estado === "ejecutada" ? "ok" : "fail",
         };
       });
