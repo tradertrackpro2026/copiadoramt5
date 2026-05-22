@@ -24,6 +24,181 @@ const { useState, useEffect, useCallback, useRef } = React;
 
 
 /* ================================================================
+   § 0  LICENCIA — COPYTRADE MT5 PRO
+   ─────────────────────────────────────────────────────────────────
+   Valida la licencia del usuario contra el Cloudflare Worker antes
+   de mostrar el dashboard. La licencia se guarda en localStorage
+   para no pedirla en cada visita.
+   NO modificar esta sección.
+   ================================================================ */
+const LICENSE_WORKER = "https://copytrade-license-worker.anibalchingal90.workers.dev";
+const LICENSE_STORAGE_KEY = "ct_license";
+
+// Genera un device ID persistente para este navegador
+const getDeviceId = () => {
+  let id = localStorage.getItem("ct_device_id");
+  if (!id) {
+    id = "WEB_" + Math.random().toString(36).slice(2,10).toUpperCase()
+             + "_" + Date.now().toString(36).toUpperCase();
+    localStorage.setItem("ct_device_id", id);
+  }
+  return id;
+};
+
+// Llama al Worker y devuelve { valid, plan, maxMasters, maxFollowers, error }
+const validateLicense = async (licenseKey) => {
+  try {
+    const res = await fetch(`${LICENSE_WORKER}/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ license: licenseKey, device_id: getDeviceId() }),
+    });
+    const data = await res.json();
+    if (data.valid) {
+      return {
+        valid:        true,
+        plan:         data.plan         || "basic",
+        maxMasters:   data.maxMasters   || 1,
+        maxFollowers: data.maxFollowers || 3,
+        reseller:     data.reseller     || "",
+      };
+    }
+    // Mapear errores a mensajes legibles
+    const msgs = {
+      LICENSE_NOT_FOUND:    "Licencia no encontrada. Verifica el código.",
+      LICENSE_REVOKED:      "Esta licencia ha sido revocada. Contacta al administrador.",
+      MAX_DEVICES_REACHED:  "Límite de dispositivos alcanzado. Contacta al administrador.",
+      MISSING_PARAMS:       "Error en la solicitud. Intenta de nuevo.",
+      SERVER_ERROR:         "Error del servidor. Intenta más tarde.",
+    };
+    return { valid: false, error: msgs[data.error] || "Licencia inválida." };
+  } catch {
+    return { valid: false, error: "Sin conexión con el servidor de licencias. Verifica tu internet." };
+  }
+};
+
+// Pantalla de ingreso de licencia
+const LicenseGate = ({ onValidated }) => {
+  const [key,     setKey]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+
+  const handleSubmit = async () => {
+    const clean = key.trim().toUpperCase();
+    if (!clean) { setError("Ingresa tu código de licencia."); return; }
+    setLoading(true); setError("");
+    const result = await validateLicense(clean);
+    setLoading(false);
+    if (result.valid) {
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({ key: clean, ...result }));
+      onValidated({ key: clean, ...result });
+    } else {
+      setError(result.error);
+    }
+  };
+
+  const planLabels = {
+    basic: { label:"🔵 Basic",  desc:"1 maestra · 3 followers" },
+    pro:   { label:"🔷 Pro",    desc:"3 maestras · 10 followers" },
+    vip:   { label:"👑 VIP",    desc:"Maestras y followers ilimitados" },
+  };
+
+  return (
+    <div style={{
+      minHeight:"100vh", background:T.bg, display:"flex",
+      alignItems:"center", justifyContent:"center", padding:20,
+    }}>
+      <div style={{
+        background:T.card, border:`1px solid ${T.borderLight}`,
+        borderRadius:20, padding:"40px 36px", width:"100%", maxWidth:420,
+        boxShadow:"0 24px 80px rgba(0,0,0,0.7)",
+      }}>
+        {/* Logo */}
+        <div style={{display:"flex", justifyContent:"center", marginBottom:24}}>
+          <Logo/>
+        </div>
+
+        <h2 style={{
+          textAlign:"center", margin:"0 0 6px", color:T.text,
+          fontSize:20, fontWeight:900,
+        }}>Ingresa tu licencia</h2>
+        <p style={{
+          textAlign:"center", color:T.textMuted, fontSize:13,
+          marginBottom:28, lineHeight:1.6,
+        }}>
+          Introduce el código de licencia que recibiste al adquirir CopyTrade MT5 Pro.
+        </p>
+
+        {/* Input licencia */}
+        <div style={{marginBottom:14}}>
+          <input
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSubmit()}
+            placeholder="EMPRESA-123456-ABCD"
+            style={{
+              width:"100%", background:T.cardLight, border:`1px solid ${error ? T.err : T.border}`,
+              borderRadius:10, padding:"12px 16px", color:T.text, fontSize:15,
+              outline:"none", boxSizing:"border-box", fontFamily:"monospace",
+              textAlign:"center", letterSpacing:"2px", textTransform:"uppercase",
+              transition:"border 0.15s",
+            }}
+          />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background:T.errLow, border:`1px solid ${T.err}40`,
+            borderRadius:8, padding:"10px 14px", marginBottom:14,
+            color:T.err, fontSize:12, textAlign:"center", lineHeight:1.6,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Botón */}
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            width:"100%", padding:"13px", borderRadius:10, border:"none",
+            background: loading ? T.cardLight : T.accent,
+            color: loading ? T.textMuted : "#fff",
+            fontWeight:800, fontSize:15, cursor: loading ? "not-allowed" : "pointer",
+            letterSpacing:"0.3px", transition:"all 0.2s",
+            boxShadow: loading ? "none" : `0 0 20px ${T.accentGlow}`,
+          }}
+        >
+          {loading ? "⟳ Validando..." : "Activar dashboard →"}
+        </button>
+
+        {/* Planes info */}
+        <div style={{marginTop:28, borderTop:`1px solid ${T.border}`, paddingTop:20}}>
+          <div style={{color:T.textMuted, fontSize:11, textAlign:"center", marginBottom:12, fontWeight:700, letterSpacing:"0.5px", textTransform:"uppercase"}}>
+            Planes disponibles
+          </div>
+          {Object.entries(planLabels).map(([k, v]) => (
+            <div key={k} style={{
+              display:"flex", justifyContent:"space-between", alignItems:"center",
+              padding:"7px 0", borderBottom:`1px solid ${T.border}`,
+            }}>
+              <span style={{color:T.textSec, fontSize:13, fontWeight:700}}>{v.label}</span>
+              <span style={{color:T.textMuted, fontSize:12}}>{v.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{marginTop:18, textAlign:"center", color:T.textMuted, fontSize:11, lineHeight:1.7}}>
+          Pago único · Sin suscripción mensual<br/>
+          ¿Problemas? Contacta al administrador.
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ================================================================
    § 1  TEMA Y CONFIGURACIÓN GLOBAL
    ─────────────────────────────────────────────────────────────────
    Modifica aquí colores, intervalos y parámetros del sistema.
@@ -882,7 +1057,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
    Encabezados de tabla + listado de FollowerRow.
    Modifica aquí solo si quieres agregar/quitar columnas de la tabla.
    ================================================================ */
-const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog }) => {
+const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
   const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
   const HEADERS = [
     { label:"Cuenta Receptora" },
@@ -892,6 +1067,9 @@ const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDel
     { label:"Estado" },
     { label:"Acciones" },
   ];
+
+  const followerLimitReached = maxFollowers < 999 && totalFollowers >= maxFollowers;
+
   return (
     <div>
       <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
@@ -903,9 +1081,17 @@ const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDel
             {master.followers.filter(f=>f.enabled).length} activas · {master.followers.filter(f=>!f.enabled).length} pausadas
           </div>
         </div>
-        <Btn variant="primary" onClick={()=>onAddFollower(master.id)} size="sm">
-          + Nueva cuenta receptora
-        </Btn>
+        <div style={{display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5}}>
+          <Btn variant="primary" onClick={()=>!followerLimitReached && onAddFollower(master.id)} size="sm"
+            disabled={followerLimitReached}>
+            + Nueva cuenta receptora
+          </Btn>
+          {followerLimitReached && (
+            <div style={{fontSize:10, color:T.warn, fontWeight:700}}>
+              ⚠ Límite del plan alcanzado ({maxFollowers} followers)
+            </div>
+          )}
+        </div>
       </div>
       <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:12, overflow:"hidden"}}>
         {/* Encabezados */}
@@ -948,6 +1134,110 @@ const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDel
             onLog={onLog}
           />
         ))}
+      </div>
+    </div>
+  );
+};
+
+/* ================================================================
+   § 19  COMPONENTE — BARRA DE PLAN DE LICENCIA
+   ─────────────────────────────────────────────────────────────────
+   Muestra el plan activo, límites de maestras y followers,
+   y el uso actual. Solo lectura — no modifica lógica de negocio.
+   ================================================================ */
+const PlanBar = ({ licenseInfo, masters, onLogout }) => {
+  const plan   = licenseInfo?.plan || "basic";
+  const maxM   = licenseInfo?.maxMasters   || 1;
+  const maxF   = licenseInfo?.maxFollowers || 3;
+  const usedM  = masters.length;
+  const usedF  = masters.reduce((acc, m) => acc + m.followers.length, 0);
+
+  const pctM = maxM >= 999 ? 0 : Math.round((usedM / maxM) * 100);
+  const pctF = maxF >= 999 ? 0 : Math.round((usedF / maxF) * 100);
+
+  const planColors = { basic: T.textSec, pro: T.accent, vip: T.warn };
+  const planLabels = { basic: "🔵 Basic", pro: "🔷 Pro", vip: "👑 VIP" };
+  const planColor  = planColors[plan] || T.textSec;
+  const planLabel  = planLabels[plan] || plan.toUpperCase();
+
+  const MiniBar = ({ used, max, color }) => (
+    <div style={{width:80, height:4, background:T.border, borderRadius:2, overflow:"hidden"}}>
+      <div style={{
+        height:"100%", borderRadius:2, transition:"width 0.4s",
+        width: max >= 999 ? "100%" : `${Math.min(pctM,100)}%`,
+        background: max >= 999 ? T.ok : used >= max ? T.err : color,
+      }}/>
+    </div>
+  );
+
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", justifyContent:"space-between",
+      flexWrap:"wrap", gap:12,
+      background:T.card, border:`1px solid ${T.border}`,
+      borderRadius:12, padding:"12px 20px", marginBottom:18,
+    }}>
+      {/* Plan badge */}
+      <div style={{display:"flex", alignItems:"center", gap:10}}>
+        <div style={{
+          background:`${planColor}18`, border:`1px solid ${planColor}40`,
+          borderRadius:8, padding:"4px 12px",
+          color:planColor, fontWeight:800, fontSize:13, letterSpacing:"0.3px",
+        }}>
+          {planLabel}
+        </div>
+        {licenseInfo?.key && (
+          <span style={{color:T.textMuted, fontSize:11, fontFamily:"monospace"}}>
+            {licenseInfo.key}
+          </span>
+        )}
+      </div>
+
+      {/* Uso maestras y followers */}
+      <div style={{display:"flex", gap:24, alignItems:"center", flexWrap:"wrap"}}>
+        {/* Maestras */}
+        <div style={{display:"flex", flexDirection:"column", gap:4}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:12}}>
+            <span style={{color:T.textMuted, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px"}}>
+              Maestras
+            </span>
+            <span style={{
+              color: usedM >= maxM && maxM < 999 ? T.err : T.text,
+              fontSize:12, fontWeight:800, fontFamily:"monospace",
+            }}>
+              {usedM} / {maxM >= 999 ? "∞" : maxM}
+            </span>
+          </div>
+          <MiniBar used={usedM} max={maxM} color={T.accent}/>
+        </div>
+
+        {/* Followers */}
+        <div style={{display:"flex", flexDirection:"column", gap:4}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:12}}>
+            <span style={{color:T.textMuted, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px"}}>
+              Followers
+            </span>
+            <span style={{
+              color: usedF >= maxF && maxF < 999 ? T.err : T.text,
+              fontSize:12, fontWeight:800, fontFamily:"monospace",
+            }}>
+              {usedF} / {maxF >= 999 ? "∞" : maxF}
+            </span>
+          </div>
+          <MiniBar used={usedF} max={maxF} color={T.ok}/>
+        </div>
+
+        {/* Botón cerrar sesión */}
+        <button onClick={onLogout} style={{
+          background:"transparent", border:`1px solid ${T.border}`,
+          borderRadius:7, padding:"5px 12px", color:T.textMuted,
+          fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:"0.3px",
+          transition:"all 0.15s",
+        }}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor=T.err;e.currentTarget.style.color=T.err;}}
+        onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.textMuted;}}>
+          🔒 Cerrar sesión
+        </button>
       </div>
     </div>
   );
@@ -999,7 +1289,7 @@ const AlertsPanel = ({ masters }) => {
    Barra de navegación superior con logo y botones globales.
    Modifica solo aquí para cambiar el encabezado.
    ================================================================ */
-const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode }) => (
+const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode, masterLimitReached }) => (
   <div style={{
     display:"flex", alignItems:"center", justifyContent:"space-between",
     padding:"16px 28px", borderBottom:`1px solid ${T.border}`,
@@ -1025,9 +1315,16 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode 
       <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
         {supaConfig?.url ? "🟢 Supabase" : "⚙️ Configurar Supabase"}
       </Btn>
-      <Btn variant="primary" onClick={onAddMaster}>
-        + Nueva cuenta maestra
-      </Btn>
+      <div style={{display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4}}>
+        <Btn variant="primary" onClick={onAddMaster} disabled={masterLimitReached}>
+          + Nueva cuenta maestra
+        </Btn>
+        {masterLimitReached && (
+          <div style={{fontSize:10, color:T.warn, fontWeight:700}}>
+            ⚠ Límite del plan alcanzado
+          </div>
+        )}
+      </div>
     </div>
   </div>
 );
@@ -1039,6 +1336,17 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode 
    Modifica aquí solo la lógica de alto nivel y el ensamblado.
    ================================================================ */
 function CopyTradeApp() {
+  // ── § 0  Estado de licencia ──
+  const licGuardada = (() => {
+    try { return JSON.parse(localStorage.getItem(LICENSE_STORAGE_KEY) || "null"); } catch { return null; }
+  })();
+  const [licenseInfo, setLicenseInfo] = useState(licGuardada);
+
+  // Si no hay licencia válida, mostrar pantalla de licencia
+  if (!licenseInfo?.valid) {
+    return <LicenseGate onValidated={info => setLicenseInfo({...info, valid:true})}/>;
+  }
+
   // ── Cargar config guardada del navegador ──
   const configGuardada = (() => {
     try { return JSON.parse(localStorage.getItem("ct_supa") || "{}"); } catch { return {}; }
@@ -1074,8 +1382,9 @@ function CopyTradeApp() {
     return ()=>clearInterval(iv);
   }, []);
 
-  // ── Simulación de variación de equity (mercado abierto) ──
+  // ── Simulación de variación de equity (solo cuando NO hay Supabase) ──
   useEffect(()=>{
+    if (supaConfig?.url) return; // Supabase conectado → datos reales, sin simulación
     const iv = setInterval(()=>{
       setMasters(p=>p.map(m=>m.status!=="online"?m:{
         ...m,
@@ -1084,7 +1393,7 @@ function CopyTradeApp() {
       }));
     }, CFG.SIM_MS);
     return ()=>clearInterval(iv);
-  }, []);
+  }, [supaConfig]);
 
   // ── Helpers para agregar entradas al log ──
   const addLog = useCallback((entries) => {
@@ -1206,20 +1515,102 @@ function CopyTradeApp() {
       });
 
       setMasters(mapped);
-      if (mapped.length > 0) setActiveMId(mapped[0].id);
+      if (mapped.length > 0) setActiveMId(prev => prev || mapped[0].id);
       setDemoMode(false);
     } catch(e) {
       console.error("Error cargando Supabase:", e);
     }
   }, []);
 
-  // ── Polling automático cada 5 segundos cuando Supabase está conectado ──
+  // ── § 18b  Cargar log real de operaciones desde Supabase ──
+  // Lee las últimas 100 ejecuciones y las señales asociadas.
+  // Se llama cada 15s para no saturar Supabase con queries pesadas.
+  const cargarLogs = useCallback(async (cfg) => {
+    if (!cfg?.url || !cfg?.key) return;
+    const h = { "apikey": cfg.key, "Authorization": `Bearer ${cfg.key}` };
+    try {
+      // Últimas 100 ejecuciones ordenadas por ID desc
+      const rE = await fetch(
+        `${cfg.url}/rest/v1/ejecuciones?select=*&order=id.desc&limit=100`,
+        { headers: h }
+      );
+      if (!rE.ok) return;
+      const ejecs = await rE.json();
+      if (!ejecs || ejecs.length === 0) return;
+
+      // IDs de señales únicas para buscar símbolo, tipo y dirección
+      const senalIds = [...new Set(ejecs.map(e => e.senal_id).filter(Boolean))];
+      let senalesMap = {};
+      if (senalIds.length > 0) {
+        const idsQuery = `(${senalIds.join(",")})`;
+        const rS = await fetch(
+          `${cfg.url}/rest/v1/senales?id=in.${idsQuery}&select=id,tipo,simbolo,direccion`,
+          { headers: h }
+        );
+        if (rS.ok) {
+          const senales = await rS.json();
+          senales.forEach(s => { senalesMap[s.id] = s; });
+        }
+      }
+
+      // Nombres de receptoras para mostrar en el log
+      const rR = await fetch(
+        `${cfg.url}/rest/v1/cuentas_receptoras?select=id,nombre`,
+        { headers: h }
+      );
+      let receptorasMap = {};
+      if (rR.ok) {
+        const recs = await rR.json();
+        recs.forEach(r => { receptorasMap[r.id] = r.nombre || r.id; });
+      }
+
+      // Nombres de maestras
+      const rM = await fetch(
+        `${cfg.url}/rest/v1/cuentas_maestras?select=id,nombre`,
+        { headers: h }
+      );
+      let maestrasMap = {};
+      if (rM.ok) {
+        const maes = await rM.json();
+        maes.forEach(m => { maestrasMap[m.id] = m.nombre || m.id; });
+      }
+
+      // Mapear ejecuciones → formato log del dashboard
+      const mapped = ejecs.map(e => {
+        const senal = senalesMap[e.senal_id] || {};
+        const ts = e.ejecutado_en
+          ? new Date(e.ejecutado_en).toLocaleTimeString("es", { hour12: false })
+          : "—";
+        return {
+          id:         e.id,
+          ts,
+          masterId:   e.maestra_id    || "—",
+          masterName: maestrasMap[e.maestra_id] || e.maestra_id || "—",
+          follower:   receptorasMap[e.receptora_id] || e.receptora_id || "—",
+          type:       senal.tipo      || "COPY",
+          symbol:     senal.simbolo   || "—",
+          dir:        senal.direccion || "—",
+          lots:       e.lotes_copiados ? String(parseFloat(e.lotes_copiados).toFixed(2)) : "—",
+          status:     e.estado === "ok" || e.estado === "ejecutada" ? "ok" : "fail",
+        };
+      });
+
+      setLogs(mapped);
+    } catch(e) {
+      console.error("Error cargando logs:", e);
+    }
+  }, []);
+
+  // ── Polling automático cuando Supabase está conectado ──
+  // Maestras/receptoras: cada 5s | Logs: cada 15s
   useEffect(() => {
     if (!supaConfig?.url) return;
     cargarDesdeSupabase(supaConfig);
-    const iv = setInterval(() => cargarDesdeSupabase(supaConfig), 5000);
-    return () => clearInterval(iv);
-  }, [supaConfig, cargarDesdeSupabase]);
+    cargarLogs(supaConfig);
+    const ivData = setInterval(() => cargarDesdeSupabase(supaConfig), 5000);
+    const ivLogs = setInterval(() => cargarLogs(supaConfig), 15000);
+    return () => { clearInterval(ivData); clearInterval(ivLogs); };
+  }, [supaConfig, cargarDesdeSupabase, cargarLogs]);
 
   // ── Guardar config Supabase en estado y localStorage ──
   const handleSupaSave = useCallback(cfg=>{
@@ -1227,9 +1618,21 @@ function CopyTradeApp() {
     setDemoMode(!cfg.url);
     try { localStorage.setItem("ct_supa", JSON.stringify(cfg)); } catch{}
     cargarDesdeSupabase(cfg);
-  },[cargarDesdeSupabase]);
+    cargarLogs(cfg);
+  },[cargarDesdeSupabase, cargarLogs]);
+
+  // ── § 19 Cerrar sesión de licencia ──
+  const handleLogout = () => {
+    localStorage.removeItem(LICENSE_STORAGE_KEY);
+    setLicenseInfo(null);
+  };
 
   /* ── Render ── */
+  const maxMasters   = licenseInfo?.maxMasters   || 1;
+  const maxFollowers = licenseInfo?.maxFollowers || 3;
+  const totalFollowers = masters.reduce((acc, m) => acc + m.followers.length, 0);
+  const masterLimitReached   = maxMasters   < 999 && masters.length >= maxMasters;
+
   return (
     <div style={{minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
 
@@ -1237,6 +1640,7 @@ function CopyTradeApp() {
       <Header
         supaConfig={supaConfig}
         demoMode={demoMode}
+        masterLimitReached={masterLimitReached}
         onOpenSupabase={()=>setModal("supabase")}
         onAddMaster={()=>setModal("newMaster")}
         onOpenLogs={()=>setModal("logs")}
@@ -1244,6 +1648,9 @@ function CopyTradeApp() {
 
       {/* ── Contenido principal ── */}
       <div style={{padding:"24px 28px", maxWidth:1400, margin:"0 auto"}}>
+
+        {/* §19 Barra de plan */}
+        <PlanBar licenseInfo={licenseInfo} masters={masters} onLogout={handleLogout}/>
 
         {/* §16 Alertas */}
         <AlertsPanel masters={masters}/>
@@ -1253,19 +1660,32 @@ function CopyTradeApp() {
           {masters.map(m=>(
             <MasterTab key={m.id} master={m} active={m.id===activeMId} onClick={()=>setActiveMId(m.id)}/>
           ))}
-          {/* Tab "agregar nueva" */}
-          <div onClick={()=>setModal("newMaster")} style={{
-            minWidth:150, border:`2px dashed ${T.border}`, borderRadius:14,
-            display:"flex", flexDirection:"column", alignItems:"center",
-            justifyContent:"center", gap:5, cursor:"pointer",
-            color:T.textMuted, fontSize:12, padding:"14px 20px",
-            transition:"all 0.18s", flexShrink:0,
-          }}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent;e.currentTarget.style.color=T.accent;}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.textMuted;}}>
-            <span style={{fontSize:24}}>+</span>
-            <span style={{fontWeight:600}}>Nueva cuenta maestra</span>
-          </div>
+          {/* Tab "agregar nueva" — bloqueado si se alcanzó el límite */}
+          {!masterLimitReached ? (
+            <div onClick={()=>setModal("newMaster")} style={{
+              minWidth:150, border:`2px dashed ${T.border}`, borderRadius:14,
+              display:"flex", flexDirection:"column", alignItems:"center",
+              justifyContent:"center", gap:5, cursor:"pointer",
+              color:T.textMuted, fontSize:12, padding:"14px 20px",
+              transition:"all 0.18s", flexShrink:0,
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent;e.currentTarget.style.color=T.accent;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.textMuted;}}>
+              <span style={{fontSize:24}}>+</span>
+              <span style={{fontWeight:600}}>Nueva cuenta maestra</span>
+            </div>
+          ) : (
+            <div style={{
+              minWidth:150, border:`2px dashed ${T.err}40`, borderRadius:14,
+              display:"flex", flexDirection:"column", alignItems:"center",
+              justifyContent:"center", gap:5,
+              color:T.err, fontSize:12, padding:"14px 20px", flexShrink:0, opacity:0.6,
+            }}>
+              <span style={{fontSize:20}}>🔒</span>
+              <span style={{fontWeight:600}}>Límite alcanzado</span>
+              <span style={{fontSize:10, color:T.textMuted}}>Actualiza tu plan</span>
+            </div>
+          )}
         </div>
 
         {/* ── Panel de cuenta maestra activa ── */}
@@ -1345,6 +1765,8 @@ function CopyTradeApp() {
             onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
             onDelete={deleteFollower}
             onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
+            maxFollowers={maxFollowers}
+            totalFollowers={totalFollowers}
           />
         )}
       </div>
