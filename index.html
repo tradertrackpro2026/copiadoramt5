@@ -970,9 +970,9 @@ const VertDivider = () => (
 
 const StatsBar = ({ master }) => (
   <div style={{display:"flex", flexWrap:"wrap", gap:0, alignItems:"center"}}>
-    <StatCell label="Balance"         value={fmt$(master.balance)}/>
+    <StatCell label="Balance"   value={fmt$(master.balance)}/>
     <VertDivider/>
-    <StatCell label="Equidad"         value={fmt$(master.equity)}/>
+    <StatCell label="Equidad"   value={fmt$(master.equity)}/>
     <VertDivider/>
     <StatCell
       label="P&L Abierto"
@@ -987,7 +987,18 @@ const StatsBar = ({ master }) => (
       note={`${master.followers.filter(f=>f.enabled).length} activa(s)`}
     />
     <VertDivider/>
-    <StatCell label="Operaciones copiadas hoy" value={master.opsToday} note="en todas las cuentas"/>
+    <StatCell
+      label="Ops hoy"
+      value={master.opsToday}
+      note="copias ejecutadas"
+    />
+    <VertDivider/>
+    <StatCell
+      label="Lotes copiados hoy"
+      value={master.lotesHoy != null ? master.lotesHoy.toFixed(2) : "—"}
+      color={T.warn}
+      note="total en receptoras"
+    />
   </div>
 );
 
@@ -1001,7 +1012,6 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Cerrar menú al hacer click fuera
   useEffect(()=>{
     if (!menuOpen) return;
     const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
@@ -1009,17 +1019,19 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
+  // 5 columnas: Cuenta | Balance | %Capital | Riesgo | Estado+Acciones
+  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.8fr";
   return (
     <div style={{
       display:"grid", gridTemplateColumns:COLS, gap:12,
-      padding:"14px 18px", borderBottom:`1px solid ${T.border}`,
+      padding:"13px 18px", borderBottom:`1px solid ${T.border}`,
       alignItems:"center",
       background: follower.failedCopies>0 ? `${T.err}08` : "transparent",
       opacity: follower.enabled ? 1 : 0.55,
       transition:"opacity 0.2s",
     }}>
-      {/* ─ Cuenta receptora ─ */}
+
+      {/* ─ Col 1: Cuenta receptora ─ */}
       <div style={{display:"flex", alignItems:"center", gap:10, minWidth:0}}>
         <div style={{
           width:34, height:34, borderRadius:9, flexShrink:0,
@@ -1042,78 +1054,85 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         </div>
       </div>
 
-      {/* ─ Balance ─ */}
+      {/* ─ Col 2: Balance ─ */}
       <div>
         <div style={{color:T.text, fontWeight:800, fontSize:14, fontFamily:"monospace"}}>{fmt$(follower.balance)}</div>
         {follower.failedCopies>0 && (
           <div style={{color:T.err, fontSize:10, marginTop:3, fontWeight:700}}>
-            ⚠ {follower.failedCopies} copia(s) fallida(s)
+            ⚠ {follower.failedCopies} fallida(s)
           </div>
         )}
       </div>
 
-      {/* ─ % Capital ─ */}
+      {/* ─ Col 3: % Capital ─ */}
       <div>
-        <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
-          <span style={{color:T.text, fontWeight:800, fontSize:13, fontFamily:"monospace"}}>
-            {follower.capitalPct}%
-          </span>
-        </div>
-        <div style={{height:4, background:T.border, borderRadius:2, overflow:"hidden"}}>
+        <span style={{color:T.text, fontWeight:800, fontSize:13, fontFamily:"monospace"}}>
+          {follower.capitalPct}%
+        </span>
+        <div style={{height:4, background:T.border, borderRadius:2, overflow:"hidden", marginTop:5, marginBottom:4}}>
           <div style={{
             height:"100%", width:`${follower.capitalPct}%`,
             background:`linear-gradient(90deg,${T.accent},${T.purple}50)`,
             borderRadius:2, transition:"width 0.3s",
           }}/>
         </div>
-        <div style={{color:T.textMuted, fontSize:10, marginTop:3}}>
-          Lote ≈ lote_master × {follower.capitalPct/100}
+        <div style={{color:T.textMuted, fontSize:10}}>
+          Lote ≈ lote_m × {follower.capitalPct/100}
         </div>
       </div>
 
-      {/* ─ Riesgo por operación ─ */}
+      {/* ─ Col 4: Riesgo por operación ─ */}
       <div style={{display:"flex", alignItems:"center", gap:5}}>
         <button onClick={()=>onRisk(follower.id, Math.max(0.01, +(follower.riskPct-0.01).toFixed(2)))}
-          style={{width:24,height:24,borderRadius:6,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           −
         </button>
-        <span style={{color:T.text, fontWeight:800, fontSize:13, minWidth:45, textAlign:"center", fontFamily:"monospace"}}>
+        <span style={{color:T.text, fontWeight:800, fontSize:12, minWidth:42, textAlign:"center", fontFamily:"monospace"}}>
           {fmtPct(follower.riskPct)}
         </span>
         <button onClick={()=>onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2))}
-          style={{width:24,height:24,borderRadius:6,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           +
         </button>
       </div>
 
-      {/* ─ Estado y ping ─ */}
-      <div>
-        <div style={{display:"flex", alignItems:"center", gap:5, marginBottom:3}}>
-          <Dot status={follower.status}/>
-          <span style={{color:T.ok, fontSize:12, fontWeight:700}}>Conectada</span>
+      {/* ─ Col 5: Estado + Toggle + Menú (todo junto) ─ */}
+      <div ref={menuRef} style={{position:"relative"}}>
+        {/* Fila superior: estado · toggle · ⋮ */}
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:6}}>
+          <div style={{display:"flex", alignItems:"center", gap:5}}>
+            <Dot status={follower.status}/>
+            <span style={{color:statusClr(follower.status), fontSize:12, fontWeight:700}}>
+              {statusLabel(follower.status)}
+            </span>
+          </div>
+          <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
+            <Toggle on={follower.enabled} onChange={()=>onToggle(follower.id)} size="sm"/>
+            <button onClick={()=>setMenuOpen(p=>!p)} style={{
+              width:26, height:26, borderRadius:6, border:`1px solid ${T.border}`,
+              background:T.cardLight, color:T.textSec, cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:17,
+            }}>⋮</button>
+          </div>
         </div>
-        <div style={{color:T.textMuted, fontSize:11}}>Ping: <b style={{color:T.textSec}}>{follower.ping}ms</b></div>
-        <div style={{color:T.textMuted, fontSize:10, marginTop:1}}>Último: {follower.lastOp}</div>
-      </div>
-
-      {/* ─ Acciones ─ */}
-      <div style={{display:"flex", alignItems:"center", gap:8, position:"relative"}} ref={menuRef}>
-        <Toggle on={follower.enabled} onChange={()=>onToggle(follower.id)} size="sm"/>
-        <button onClick={()=>setMenuOpen(p=>!p)} style={{
-          width:28, height:28, borderRadius:6, border:`1px solid ${T.border}`,
-          background:T.cardLight, color:T.textSec, cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
-        }}>⋮</button>
+        {/* Fila inferior: ping · última op */}
+        <div style={{display:"flex", alignItems:"center", gap:8, marginTop:5}}>
+          <span style={{color:T.textMuted, fontSize:10}}>
+            Ping: <b style={{color:T.textSec}}>{follower.ping}ms</b>
+          </span>
+          <span style={{color:T.textMuted, fontSize:10}}>· {follower.lastOp}</span>
+        </div>
+        {/* Menú desplegable */}
         {menuOpen && (
           <div style={{
-            position:"absolute", right:0, top:34,
+            position:"absolute", right:0, top:36,
             background:T.card, border:`1px solid ${T.borderLight}`,
-            borderRadius:10, minWidth:165, zIndex:200, overflow:"hidden",
-            boxShadow:"0 12px 40px rgba(0,0,0,0.6)",
+            borderRadius:10, minWidth:165, zIndex:300, overflow:"hidden",
+            boxShadow:"0 12px 40px rgba(0,0,0,0.7)",
           }}>
             {[
-              { icon:"✏️", label:"Editar",         action:()=>{onEdit(follower);   setMenuOpen(false);}, color:T.text },
-              { icon:"📋", label:"Ver log",         action:()=>{onLog(follower);    setMenuOpen(false);}, color:T.text },
+              { icon:"✏️", label:"Editar",         action:()=>{onEdit(follower);    setMenuOpen(false);}, color:T.text },
+              { icon:"📋", label:"Ver log",         action:()=>{onLog(follower);     setMenuOpen(false);}, color:T.text },
               { icon:"🗑️", label:"Eliminar cuenta", action:()=>{onDelete(follower.id);setMenuOpen(false);}, color:T.err  },
             ].map(item=>(
               <div key={item.label} onClick={item.action} style={{
@@ -1132,7 +1151,6 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
     </div>
   );
 };
-
 /* ================================================================
    § 15b COMPONENTE — DRAWER LATERAL DE RECEPTORAS
    ─────────────────────────────────────────────────────────────────
@@ -1284,14 +1302,13 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
    Encabezados de tabla + listado de FollowerRow.
    ================================================================ */
 const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
-  const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
+  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.8fr";
   const HEADERS = [
     { label:"Cuenta Receptora" },
     { label:"Balance" },
-    { label:"Asignación de capital", tip:"Porcentaje del capital de esta cuenta usado para copiar lotes." },
-    { label:"Riesgo por operación",  tip:"Porcentaje del balance arriesgado por operación copiada." },
-    { label:"Estado" },
-    { label:"Acciones" },
+    { label:"% Capital", tip:"Porcentaje del capital de esta cuenta usado para copiar lotes." },
+    { label:"Riesgo/op",  tip:"Porcentaje del balance arriesgado por operación copiada." },
+    { label:"Estado / Acciones" },
   ];
 
   const followerLimitReached = maxFollowers < 999 && totalFollowers >= maxFollowers;
@@ -1526,46 +1543,118 @@ const AlertsPanel = ({ masters }) => {
    Barra de navegación superior con logo y botones globales.
    Modifica solo aquí para cambiar el encabezado.
    ================================================================ */
-const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, onOpenEAParams, demoMode, masterLimitReached }) => (
-  <div style={{
-    display:"flex", alignItems:"center", justifyContent:"space-between",
-    padding:"16px 28px", borderBottom:`1px solid ${T.border}`,
-    background:T.card, position:"sticky", top:0, zIndex:100,
-    backdropFilter:"blur(10px)",
-  }}>
-    <div>
-      <Logo/>
-      <div style={{color:T.textMuted, fontSize:11, marginTop:6, paddingLeft:48}}>
-        Gestiona tus cuentas maestras y las cuentas que copian sus operaciones.
+const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, onOpenEAParams, demoMode, masterLimitReached, licenseInfo, masters, onLogout }) => {
+  const plan       = licenseInfo?.plan || "basic";
+  const maxM       = licenseInfo?.maxMasters   || 1;
+  const maxF       = licenseInfo?.maxFollowers || 3;
+  const usedM      = masters.length;
+  const usedF      = masters.reduce((acc, m) => acc + m.followers.length, 0);
+  const pctM       = maxM >= 999 ? 100 : Math.min(Math.round((usedM / maxM) * 100), 100);
+  const pctF       = maxF >= 999 ? 100 : Math.min(Math.round((usedF / maxF) * 100), 100);
+  const planColors = { basic: T.textSec, pro: T.accent, vip: T.warn };
+  const planLabels = { basic: "🔵 Basic", pro: "🔷 Pro", vip: "👑 VIP" };
+  const planColor  = planColors[plan] || T.textSec;
+  const planLabel  = planLabels[plan] || plan.toUpperCase();
+
+  const UsagePill = ({ label, used, max, pct, color }) => (
+    <div style={{display:"flex", alignItems:"center", gap:8}}>
+      <span style={{color:T.textMuted, fontSize:10, fontWeight:700,
+        textTransform:"uppercase", letterSpacing:"0.5px", whiteSpace:"nowrap"}}>
+        {label}
+      </span>
+      <span style={{
+        color: used >= max && max < 999 ? T.err : T.text,
+        fontSize:13, fontWeight:900, fontFamily:"monospace", letterSpacing:"-0.5px",
+      }}>
+        {used}<span style={{color:T.textMuted, fontWeight:400}}>/</span>{max >= 999 ? "∞" : max}
+      </span>
+      <div style={{width:48, height:3, background:T.border, borderRadius:2, overflow:"hidden"}}>
+        <div style={{
+          height:"100%", borderRadius:2, transition:"width 0.4s",
+          width: max >= 999 ? "100%" : `${pct}%`,
+          background: max >= 999 ? T.ok : used >= max ? T.err : color,
+        }}/>
       </div>
     </div>
-    <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
-      {demoMode && (
+  );
+
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", justifyContent:"space-between",
+      padding:"0 24px", height:58, borderBottom:`1px solid ${T.border}`,
+      background:T.card, position:"sticky", top:0, zIndex:100,
+      backdropFilter:"blur(10px)", gap:16, flexShrink:0,
+    }}>
+
+      {/* ── Izquierda: Logo ── */}
+      <Logo/>
+
+      {/* ── Centro: Plan + uso ── */}
+      <div style={{display:"flex", alignItems:"center", gap:14, flex:1, justifyContent:"center"}}>
+        {/* Plan badge */}
         <div style={{
-          background:T.warnLow, border:`1px solid ${T.warn}40`,
-          borderRadius:8, padding:"4px 10px", fontSize:11, color:T.warn, fontWeight:700,
+          background:`${planColor}18`, border:`1px solid ${planColor}40`,
+          borderRadius:7, padding:"3px 11px",
+          color:planColor, fontWeight:800, fontSize:12, whiteSpace:"nowrap",
         }}>
-          🟡 Modo Demo
+          {planLabel}
         </div>
-      )}
-      <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Log global</Btn>
-      <Btn variant="ghost" onClick={onOpenEAParams} size="sm">🖥️ Params EA</Btn>
-      <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
-        {supaConfig?.url ? "🟢 Supabase" : "⚙️ Configurar Supabase"}
-      </Btn>
-      <div style={{display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4}}>
-        <Btn variant="primary" onClick={onAddMaster} disabled={masterLimitReached}>
-          + Nueva cuenta maestra
-        </Btn>
-        {masterLimitReached && (
-          <div style={{fontSize:10, color:T.warn, fontWeight:700}}>
-            ⚠ Límite del plan alcanzado
-          </div>
+
+        {/* Licencia */}
+        {licenseInfo?.key && (
+          <span style={{color:T.textMuted, fontSize:11, fontFamily:"monospace", letterSpacing:"0.5px"}}>
+            {licenseInfo.key}
+          </span>
+        )}
+
+        {/* Divider */}
+        <div style={{width:1, height:22, background:T.border, flexShrink:0}}/>
+
+        {/* Maestras */}
+        <UsagePill label="Maestras" used={usedM} max={maxM} pct={pctM} color={T.accent}/>
+
+        {/* Followers */}
+        <UsagePill label="Followers" used={usedF} max={maxF} pct={pctF} color={T.ok}/>
+
+        {/* Demo badge */}
+        {demoMode && (
+          <div style={{
+            background:T.warnLow, border:`1px solid ${T.warn}40`,
+            borderRadius:7, padding:"3px 9px", fontSize:10, color:T.warn, fontWeight:700,
+          }}>🟡 Demo</div>
         )}
       </div>
+
+      {/* ── Derecha: Acciones ── */}
+      <div style={{display:"flex", gap:7, alignItems:"center", flexShrink:0}}>
+        <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Log</Btn>
+        <Btn variant="ghost" onClick={onOpenEAParams} size="sm">🖥️ Params EA</Btn>
+        <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
+          {supaConfig?.url ? "🟢 Supabase" : "⚙️ Supabase"}
+        </Btn>
+
+        {/* Divider */}
+        <div style={{width:1, height:22, background:T.border}}/>
+
+        <Btn variant="primary" onClick={onAddMaster} disabled={masterLimitReached} size="sm">
+          + Nueva maestra
+        </Btn>
+
+        {/* Cerrar sesión */}
+        <button onClick={onLogout} title="Cerrar sesión" style={{
+          background:"transparent", border:`1px solid ${T.border}`,
+          borderRadius:7, padding:"5px 10px", color:T.textMuted,
+          fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:"0.3px",
+          transition:"all 0.15s", whiteSpace:"nowrap",
+        }}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor=T.err;e.currentTarget.style.color=T.err;}}
+        onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.textMuted;}}>
+          🔒 Salir
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ================================================================
    § 18  APP PRINCIPAL
@@ -1703,7 +1792,7 @@ function CopyTradeApp() {
         }),
       });
     }
-    setMasters(p=>[...p, m]);
+    setMasters(p => sortById([...p, m]));
     setActiveMId(m.id);
   }, [supaConfig]);
 
@@ -1717,7 +1806,7 @@ function CopyTradeApp() {
       await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras?id=eq.${mid}`, { method:"DELETE", headers:h });
     }
     setMasters(p => {
-      const filtered = p.filter(m => m.id !== mid);
+      const filtered = sortById(p.filter(m => m.id !== mid));
       setActiveMId(filtered.length > 0 ? filtered[0].id : null);
       return filtered;
     });
@@ -1742,7 +1831,7 @@ function CopyTradeApp() {
         }),
       });
     }
-    setMasters(p=>p.map(m=>m.id===mid?{...m,followers:[...m.followers,f]}:m));
+    setMasters(p=>p.map(m=>m.id===mid?{...m,followers:sortById([...m.followers,f])}:m));
   }, [supaConfig]);
 
   const toggleFollower = useCallback(fid=>{
@@ -1781,6 +1870,9 @@ function CopyTradeApp() {
   };
 
   // ── Cargar datos reales desde Supabase ──
+  // Orden estable por ID: MA-001 < MA-002 < MA-003 ...
+  const sortById = (arr) => [...arr].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric:true }));
+
   const cargarDesdeSupabase = useCallback(async (cfg) => {
     if (!cfg?.url || !cfg?.key) return;
     const h = {
@@ -1788,44 +1880,47 @@ function CopyTradeApp() {
       "Authorization": `Bearer ${cfg.key}`,
     };
     try {
-      // Cargar cuentas maestras
-      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*`, { headers: h });
+      // ORDER BY created_at → siempre llegan en orden de creación
+      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*&order=created_at.asc`, { headers: h });
       if (!rM.ok) return;
       const maestras = await rM.json();
       if (!maestras || maestras.length === 0) return;
 
-      // Cargar cuentas receptoras
-      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*`, { headers: h });
+      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*&order=created_at.asc`, { headers: h });
       const receptoras = rR.ok ? await rR.json() : [];
 
-      // Cargar ejecuciones de hoy para contar ops
       const hoy = new Date().toISOString().split("T")[0];
-      const rE = await fetch(`${cfg.url}/rest/v1/ejecuciones?ejecutado_en=gte.${hoy}T00:00:00&select=maestra_id`, { headers: h });
+      const rE = await fetch(`${cfg.url}/rest/v1/ejecuciones?ejecutado_en=gte.${hoy}T00:00:00&select=maestra_id,lotes_copiados`, { headers: h });
       const ejecs = rE.ok ? await rE.json() : [];
 
       // Mapear a formato del dashboard
       const mapped = maestras.map(m => {
-        const opsHoy = ejecs.filter(e => e.maestra_id === m.id).length;
-        const followers = receptoras
-          .filter(r => r.maestra_id === m.id)
-          .map(r => ({
-            id:          r.id,
-            tag:         r.tag || r.id.slice(-2),
-            name:        r.nombre,
-            accountNum:  r.numero_cuenta || r.id,
-            broker:      r.broker || "—",
-            platform:    r.plataforma || "MT5",
-            status:      r.estado || "offline",
-            balance:     parseFloat(r.balance) || 0,
-            capitalPct:  parseFloat(r.capital_pct) || 50,
-            riskPct:     parseFloat(r.riesgo_pct) || 0.5,
-            delayMs:     r.delay_ms || 0,
-            readOnly:    r.solo_lectura || false,
-            enabled:     r.activa !== false,
-            ping:        r.ping_ms || 0,
-            failedCopies:r.copias_fallidas || 0,
-            lastOp:      r.ultima_op ? new Date(r.ultima_op).toLocaleTimeString("es",{hour12:false}) : "—",
-          }));
+        const ejecsM    = ejecs.filter(e => e.maestra_id === m.id);
+        const opsHoy    = ejecsM.length;
+        const lotesHoy  = ejecsM.reduce((s, e) => s + (parseFloat(e.lotes_copiados) || 0), 0);
+        // Followers también ordenados por ID
+        const followers = sortById(
+          receptoras
+            .filter(r => r.maestra_id === m.id)
+            .map(r => ({
+              id:          r.id,
+              tag:         r.tag || r.id.slice(-2),
+              name:        r.nombre,
+              accountNum:  r.numero_cuenta || r.id,
+              broker:      r.broker || "—",
+              platform:    r.plataforma || "MT5",
+              status:      r.estado || "offline",
+              balance:     parseFloat(r.balance) || 0,
+              capitalPct:  parseFloat(r.capital_pct) || 50,
+              riskPct:     parseFloat(r.riesgo_pct) || 0.5,
+              delayMs:     r.delay_ms || 0,
+              readOnly:    r.solo_lectura || false,
+              enabled:     r.activa !== false,
+              ping:        r.ping_ms || 0,
+              failedCopies:r.copias_fallidas || 0,
+              lastOp:      r.ultima_op ? new Date(r.ultima_op).toLocaleTimeString("es",{hour12:false}) : "—",
+            }))
+        );
         return {
           id:        m.id,
           tag:       m.tag || "M1",
@@ -1840,12 +1935,22 @@ function CopyTradeApp() {
           copierOn:  m.copiadora_on !== false,
           readOnly:  false,
           opsToday:  opsHoy,
+          lotesHoy:  +lotesHoy.toFixed(2),
           followers,
         };
       });
 
-      setMasters(mapped);
-      if (mapped.length > 0) setActiveMId(prev => prev || mapped[0].id);
+      // Merge: actualiza las existentes, conserva las creadas localmente que aún
+      // no llegaron al poll (evita el parpadeo / desaparición al crear)
+      setMasters(prev => {
+        const supaIds = new Set(mapped.map(m => m.id));
+        // Maestras locales que Supabase todavía no devolvió (recién creadas)
+        const localOnly = prev.filter(p => !supaIds.has(p.id));
+        // Unir y ordenar siempre por ID para posición fija
+        return sortById([...mapped, ...localOnly]);
+      });
+
+      setActiveMId(prev => prev || mapped[0]?.id || null);
       setDemoMode(false);
     } catch(e) {
       console.error("Error cargando Supabase:", e);
@@ -1975,7 +2080,7 @@ function CopyTradeApp() {
       display:"flex", flexDirection:"column", overflow:"hidden",
     }}>
 
-      {/* §17 Header */}
+      {/* §17+19 Header unificado */}
       <Header
         supaConfig={supaConfig}
         demoMode={demoMode}
@@ -1984,6 +2089,9 @@ function CopyTradeApp() {
         onAddMaster={()=>setModal("newMaster")}
         onOpenLogs={()=>setModal("logs")}
         onOpenEAParams={()=>setModal("eaParams")}
+        licenseInfo={licenseInfo}
+        masters={masters}
+        onLogout={handleLogout}
       />
 
       {/* ── Contenido principal — compacto y sin scroll global ── */}
@@ -1992,8 +2100,6 @@ function CopyTradeApp() {
         {/* Parte fija */}
         <div style={{flexShrink:0}}>
 
-        {/* §19 Barra de plan */}
-        <PlanBar licenseInfo={licenseInfo} masters={masters} onLogout={handleLogout}/>
 
         {/* §16 Alertas */}
         <AlertsPanel masters={masters}/>
