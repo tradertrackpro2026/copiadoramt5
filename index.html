@@ -1336,16 +1336,13 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode,
    Modifica aquí solo la lógica de alto nivel y el ensamblado.
    ================================================================ */
 function CopyTradeApp() {
+  // ══ TODOS LOS HOOKS PRIMERO — Regla de React: nunca hooks después de un return ══
+
   // ── § 0  Estado de licencia ──
   const licGuardada = (() => {
     try { return JSON.parse(localStorage.getItem(LICENSE_STORAGE_KEY) || "null"); } catch { return null; }
   })();
   const [licenseInfo, setLicenseInfo] = useState(licGuardada);
-
-  // Si no hay licencia válida, mostrar pantalla de licencia
-  if (!licenseInfo?.valid) {
-    return <LicenseGate onValidated={info => setLicenseInfo({...info, valid:true})}/>;
-  }
 
   // ── Cargar config guardada del navegador ──
   const configGuardada = (() => {
@@ -1628,10 +1625,15 @@ function CopyTradeApp() {
   };
 
   /* ── Render ── */
-  const maxMasters   = licenseInfo?.maxMasters   || 1;
-  const maxFollowers = licenseInfo?.maxFollowers || 3;
+  const maxMasters     = licenseInfo?.maxMasters   || 1;
+  const maxFollowers   = licenseInfo?.maxFollowers || 3;
   const totalFollowers = masters.reduce((acc, m) => acc + m.followers.length, 0);
-  const masterLimitReached   = maxMasters   < 999 && masters.length >= maxMasters;
+  const masterLimitReached = maxMasters < 999 && masters.length >= maxMasters;
+
+  // ── § 0  Si no hay licencia válida → pantalla de licencia ──
+  if (!licenseInfo?.valid) {
+    return <LicenseGate onValidated={info => setLicenseInfo({...info, valid:true})}/>;
+  }
 
   return (
     <div style={{minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
