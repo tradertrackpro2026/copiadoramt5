@@ -1278,9 +1278,11 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
     </>
   );
 };
+
+/* ================================================================
+   § 15  COMPONENTE — TABLA DE CUENTAS RECEPTORAS (mantenida como fallback)
    ─────────────────────────────────────────────────────────────────
    Encabezados de tabla + listado de FollowerRow.
-   Modifica aquí solo si quieres agregar/quitar columnas de la tabla.
    ================================================================ */
 const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
   const COLS = "2.2fr 1fr 1.5fr 1.3fr 1.4fr 100px";
