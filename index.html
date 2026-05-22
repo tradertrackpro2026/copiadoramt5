@@ -1009,19 +1009,60 @@ const StatsBar = ({ master }) => (
    Una fila por cada cuenta follower con sus controles.
    Modifica solo esta sección para cambiar la tabla de followers.
    ================================================================ */
+const playClick = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.06);
+  } catch(e) {}
+};
+
+/* Botón de acción compacto con efecto hover/press */
+const ActionBtn = ({ icon, label, onClick, variant="default" }) => {
+  const [pressed, setPressed] = React.useState(false);
+  const [hovered, setHovered] = React.useState(false);
+  const colors = {
+    default: { bg: T.cardLight,        border: T.border,    color: T.textSec,   glow: "none"                        },
+    edit:    { bg: T.accentLow,        border: T.accent+"50", color: T.accent,  glow: `0 0 8px ${T.accentGlow}`     },
+    log:     { bg: T.purpleLow,        border: T.purple+"50", color: T.purple,  glow: `0 0 8px ${T.purple}40`       },
+    danger:  { bg: T.errLow,           border: T.err+"50",  color: T.err,       glow: `0 0 8px ${T.err}40`          },
+  };
+  const c = colors[variant] || colors.default;
+  const active = hovered || pressed;
+  return (
+    <button
+      title={label}
+      onClick={() => { playClick(); onClick(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setPressed(false); }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      style={{
+        width:28, height:28, borderRadius:7,
+        border:`1px solid ${active ? c.border : T.border}`,
+        background: active ? c.bg : T.cardLight,
+        color: active ? c.color : T.textMuted,
+        cursor:"pointer", fontSize:13,
+        display:"flex", alignItems:"center", justifyContent:"center",
+        flexShrink:0, transition:"all 0.12s",
+        transform: pressed ? "scale(0.88)" : hovered ? "scale(1.08)" : "scale(1)",
+        boxShadow: active ? c.glow : "none",
+      }}>
+      {icon}
+    </button>
+  );
+};
+
 const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(()=>{
-    if (!menuOpen) return;
-    const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
-  // 5 columnas: Cuenta | Balance | %Capital | Riesgo | Estado+Acciones
-  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.8fr";
+  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.9fr";
   return (
     <div style={{
       display:"grid", gridTemplateColumns:COLS, gap:12,
@@ -1084,22 +1125,27 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
 
       {/* ─ Col 4: Riesgo por operación ─ */}
       <div style={{display:"flex", alignItems:"center", gap:5}}>
-        <button onClick={()=>onRisk(follower.id, Math.max(0.01, +(follower.riskPct-0.01).toFixed(2)))}
-          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <button onClick={()=>{playClick(); onRisk(follower.id, Math.max(0.01, +(follower.riskPct-0.01).toFixed(2)));}}
+          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.12s"}}
+          onMouseEnter={e=>{e.currentTarget.style.background=T.cardMid;e.currentTarget.style.transform="scale(1.1)";}}
+          onMouseLeave={e=>{e.currentTarget.style.background=T.cardLight;e.currentTarget.style.transform="scale(1)";}}>
           −
         </button>
         <span style={{color:T.text, fontWeight:800, fontSize:12, minWidth:42, textAlign:"center", fontFamily:"monospace"}}>
           {fmtPct(follower.riskPct)}
         </span>
-        <button onClick={()=>onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2))}
-          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <button onClick={()=>{playClick(); onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2));}}
+          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.12s"}}
+          onMouseEnter={e=>{e.currentTarget.style.background=T.cardMid;e.currentTarget.style.transform="scale(1.1)";}}
+          onMouseLeave={e=>{e.currentTarget.style.background=T.cardLight;e.currentTarget.style.transform="scale(1)";}}>
           +
         </button>
       </div>
 
-      {/* ─ Col 5: Estado + Toggle + Menú (todo junto) ─ */}
-      <div ref={menuRef} style={{position:"relative"}}>
-        {/* Fila superior: estado · toggle · ⋮ */}
+      {/* ─ Col 5: Estado + Botones directos ─ */}
+      <div style={{display:"flex", flexDirection:"column", gap:7}}>
+
+        {/* Fila 1: punto + estado + toggle */}
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:6}}>
           <div style={{display:"flex", alignItems:"center", gap:5}}>
             <Dot status={follower.status}/>
@@ -1107,47 +1153,30 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
               {statusLabel(follower.status)}
             </span>
           </div>
-          <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
-            <Toggle on={follower.enabled} onChange={()=>onToggle(follower.id)} size="sm"/>
-            <button onClick={()=>setMenuOpen(p=>!p)} style={{
-              width:26, height:26, borderRadius:6, border:`1px solid ${T.border}`,
-              background:T.cardLight, color:T.textSec, cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:17,
-            }}>⋮</button>
+          <Toggle
+            on={follower.enabled}
+            onChange={()=>{ playClick(); onToggle(follower.id); }}
+            size="sm"
+          />
+        </div>
+
+        {/* Fila 2: botones de acción + ping */}
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+          {/* Botones visibles directamente */}
+          <div style={{display:"flex", gap:4}}>
+            <ActionBtn icon="✏️" label="Editar"          variant="edit"   onClick={()=>onEdit(follower)}/>
+            <ActionBtn icon="📋" label="Ver log"          variant="log"    onClick={()=>onLog(follower)}/>
+            <ActionBtn icon="🗑" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
+          </div>
+          {/* Ping y última op */}
+          <div style={{textAlign:"right"}}>
+            <div style={{color:T.textMuted, fontSize:10}}>
+              <b style={{color:T.textSec}}>{follower.ping}ms</b>
+            </div>
+            <div style={{color:T.textMuted, fontSize:9, marginTop:1}}>{follower.lastOp}</div>
           </div>
         </div>
-        {/* Fila inferior: ping · última op */}
-        <div style={{display:"flex", alignItems:"center", gap:8, marginTop:5}}>
-          <span style={{color:T.textMuted, fontSize:10}}>
-            Ping: <b style={{color:T.textSec}}>{follower.ping}ms</b>
-          </span>
-          <span style={{color:T.textMuted, fontSize:10}}>· {follower.lastOp}</span>
-        </div>
-        {/* Menú desplegable */}
-        {menuOpen && (
-          <div style={{
-            position:"absolute", right:0, top:36,
-            background:T.card, border:`1px solid ${T.borderLight}`,
-            borderRadius:10, minWidth:165, zIndex:300, overflow:"hidden",
-            boxShadow:"0 12px 40px rgba(0,0,0,0.7)",
-          }}>
-            {[
-              { icon:"✏️", label:"Editar",         action:()=>{onEdit(follower);    setMenuOpen(false);}, color:T.text },
-              { icon:"📋", label:"Ver log",         action:()=>{onLog(follower);     setMenuOpen(false);}, color:T.text },
-              { icon:"🗑️", label:"Eliminar cuenta", action:()=>{onDelete(follower.id);setMenuOpen(false);}, color:T.err  },
-            ].map(item=>(
-              <div key={item.label} onClick={item.action} style={{
-                padding:"10px 14px", cursor:"pointer", color:item.color,
-                fontSize:13, display:"flex", alignItems:"center", gap:8,
-                transition:"background 0.1s",
-              }}
-              onMouseEnter={e=>e.currentTarget.style.background=T.cardLight}
-              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <span>{item.icon}</span>{item.label}
-              </div>
-            ))}
-          </div>
-        )}
+
       </div>
     </div>
   );
@@ -1303,13 +1332,13 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
    Encabezados de tabla + listado de FollowerRow.
    ================================================================ */
 const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
-  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.8fr";
+  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.9fr";
   const HEADERS = [
     { label:"Cuenta Receptora" },
     { label:"Balance" },
     { label:"% Capital", tip:"Porcentaje del capital de esta cuenta usado para copiar lotes." },
     { label:"Riesgo/op",  tip:"Porcentaje del balance arriesgado por operación copiada." },
-    { label:"Estado / Acciones" },
+    { label:"Estado · Acciones" },
   ];
 
   const followerLimitReached = maxFollowers < 999 && totalFollowers >= maxFollowers;
