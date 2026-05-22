@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#070b13;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;}
+    body{background:#0d0d10;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;}
     input,select,button{font-family:inherit;}
     ::-webkit-scrollbar{width:6px;height:6px;}
     ::-webkit-scrollbar-track{background:#0c1220;}
@@ -206,27 +206,27 @@ const LicenseGate = ({ onValidated }) => {
    NO toques otras secciones si solo quieres cambiar apariencia.
    ================================================================ */
 const T = {
-  bg:          "#070b13",
-  card:        "#0c1220",
-  cardHover:   "#101829",
-  cardLight:   "#141f32",
-  cardMid:     "#1a2840",
-  border:      "#1c2d45",
-  borderLight: "#24385a",
-  text:        "#e8eef8",
-  textMuted:   "#4a6080",
-  textSec:     "#7a95b8",
-  accent:      "#2979ff",
-  accentLow:   "rgba(41,121,255,0.12)",
-  accentGlow:  "rgba(41,121,255,0.25)",
-  ok:          "#00e676",
-  okLow:       "rgba(0,230,118,0.10)",
-  warn:        "#ffab00",
-  warnLow:     "rgba(255,171,0,0.10)",
-  err:         "#ff3d5a",
-  errLow:      "rgba(255,61,90,0.10)",
-  purple:      "#7c4dff",
-  purpleLow:   "rgba(124,77,255,0.12)",
+  bg:          "#0d0d10",          // carbón puro
+  card:        "#14141a",          // gris oscuro
+  cardHover:   "#1a1a22",
+  cardLight:   "#1e1e28",
+  cardMid:     "#252532",
+  border:      "#2c2c3e",          // borde gris-slate
+  borderLight: "#3a3a52",
+  text:        "#dfe1f0",          // blanco frío / platino claro
+  textMuted:   "#52526e",          // gris medio
+  textSec:     "#9090b4",          // gris-plata
+  accent:      "#818cf8",          // índigo / violeta suave — marca visual
+  accentLow:   "rgba(129,140,248,0.13)",
+  accentGlow:  "rgba(129,140,248,0.30)",
+  ok:          "#10d48e",          // esmeralda
+  okLow:       "rgba(16,212,142,0.11)",
+  warn:        "#f5a623",          // ámbar
+  warnLow:     "rgba(245,166,35,0.11)",
+  err:         "#f25c6e",          // rojo coral
+  errLow:      "rgba(242,92,110,0.11)",
+  purple:      "#c084fc",          // lavanda
+  purpleLow:   "rgba(192,132,252,0.13)",
 };
 
 const CFG = {
@@ -928,12 +928,12 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
         boxShadow: active ? `0 0 12px ${T.accentGlow}` : "none",
       }}>{master.tag}</div>
       <div style={{minWidth:0}}>
-        <div style={{color:T.text, fontWeight:700, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+        <div style={{color:T.text, fontWeight:700, fontSize:14, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
           {master.name}
         </div>
         <div style={{display:"flex", alignItems:"center", gap:5, marginTop:2}}>
           <Dot status={master.status}/>
-          <span style={{color:statusClr(master.status), fontSize:11, fontWeight:600}}>
+          <span style={{color:statusClr(master.status), fontSize:12, fontWeight:700}}>
             {statusLabel(master.status)}
           </span>
         </div>
@@ -955,18 +955,18 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
    ================================================================ */
 const StatCell = ({ label, value, color, note, border=true }) => (
   <div style={{
-    padding:"0 20px 0 0",
+    padding:"0 22px 0 0",
     borderRight: border ? `1px solid ${T.border}` : "none",
   }}>
-    <div style={{color:T.textMuted, fontSize:9, marginBottom:5, fontWeight:700,
-      textTransform:"uppercase", letterSpacing:"1px", whiteSpace:"nowrap"}}>
+    <div style={{color:T.textMuted, fontSize:10, marginBottom:6, fontWeight:700,
+      textTransform:"uppercase", letterSpacing:"0.8px", whiteSpace:"nowrap"}}>
       {label}
     </div>
-    <div style={{color:color||T.text, fontSize:20, fontWeight:900,
+    <div style={{color:color||T.text, fontSize:22, fontWeight:900,
       letterSpacing:"-0.5px", fontFamily:"monospace", lineHeight:1}}>
       {value}
     </div>
-    {note && <div style={{color:T.textMuted, fontSize:10, marginTop:4}}>{note}</div>}
+    {note && <div style={{color:T.textMuted, fontSize:11, marginTop:5}}>{note}</div>}
   </div>
 );
 
@@ -1022,15 +1022,14 @@ const playClick = () => {
   } catch(e) {}
 };
 
-/* Botón de acción compacto con efecto hover/press */
-const ActionBtn = ({ icon, label, onClick, variant="default" }) => {
+/* Botón de acción con texto + icono + efecto hover/press */
+const ActionBtn = ({ icon, text, label, onClick, variant="default" }) => {
   const [pressed, setPressed] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const colors = {
-    default: { bg: T.cardLight,        border: T.border,    color: T.textSec,   glow: "none"                        },
-    edit:    { bg: T.accentLow,        border: T.accent+"50", color: T.accent,  glow: `0 0 8px ${T.accentGlow}`     },
-    log:     { bg: T.purpleLow,        border: T.purple+"50", color: T.purple,  glow: `0 0 8px ${T.purple}40`       },
-    danger:  { bg: T.errLow,           border: T.err+"50",  color: T.err,       glow: `0 0 8px ${T.err}40`          },
+    default: { bg: T.cardLight,  border: T.border,      color: T.textSec, glow: "none"                    },
+    log:     { bg: T.purpleLow,  border: T.purple+"50", color: T.purple,  glow: `0 0 8px ${T.purple}40`   },
+    danger:  { bg: T.errLow,     border: T.err+"50",    color: T.err,     glow: `0 0 8px ${T.err}40`      },
   };
   const c = colors[variant] || colors.default;
   const active = hovered || pressed;
@@ -1043,17 +1042,20 @@ const ActionBtn = ({ icon, label, onClick, variant="default" }) => {
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
       style={{
-        width:28, height:28, borderRadius:7,
+        height:26, borderRadius:7, padding: text ? "0 9px" : "0",
+        width: text ? "auto" : 26,
         border:`1px solid ${active ? c.border : T.border}`,
         background: active ? c.bg : T.cardLight,
         color: active ? c.color : T.textMuted,
-        cursor:"pointer", fontSize:13,
-        display:"flex", alignItems:"center", justifyContent:"center",
-        flexShrink:0, transition:"all 0.12s",
-        transform: pressed ? "scale(0.88)" : hovered ? "scale(1.08)" : "scale(1)",
+        cursor:"pointer", fontSize:12,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:4,
+        flexShrink:0, transition:"all 0.12s", whiteSpace:"nowrap",
+        transform: pressed ? "scale(0.93)" : hovered ? "scale(1.04)" : "scale(1)",
         boxShadow: active ? c.glow : "none",
+        fontWeight: 700, fontFamily:"inherit",
       }}>
-      {icon}
+      <span style={{fontSize:13}}>{icon}</span>
+      {text && <span style={{fontSize:10, letterSpacing:"0.3px"}}>{text}</span>}
     </button>
   );
 };
@@ -1082,7 +1084,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
           <div style={{color:T.text, fontWeight:700, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
             {follower.name}
           </div>
-          <div style={{color:T.textMuted, fontSize:11, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+          <div style={{color:T.textMuted, fontSize:12, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
             {follower.accountNum} • {follower.platform} • {follower.broker}
           </div>
           <div style={{display:"flex", gap:4, marginTop:3, flexWrap:"wrap"}}>
@@ -1095,7 +1097,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
 
       {/* ─ Col 2: Balance ─ */}
       <div>
-        <div style={{color:T.text, fontWeight:800, fontSize:14, fontFamily:"monospace"}}>{fmt$(follower.balance)}</div>
+        <div style={{color:T.text, fontWeight:800, fontSize:15, fontFamily:"monospace"}}>{fmt$(follower.balance)}</div>
         {follower.failedCopies>0 && (
           <div style={{color:T.err, fontSize:10, marginTop:3, fontWeight:700}}>
             ⚠ {follower.failedCopies} fallida(s)
@@ -1108,7 +1110,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <span style={{color:T.text, fontWeight:800, fontSize:13, fontFamily:"monospace"}}>
           {follower.capitalPct}%
         </span>
-        <div style={{height:4, background:T.border, borderRadius:2, overflow:"hidden", marginTop:5, marginBottom:4}}>
+        <div style={{height:5, background:T.border, borderRadius:2, overflow:"hidden", marginTop:5, marginBottom:4}}>
           <div style={{
             height:"100%", width:`${follower.capitalPct}%`,
             background:`linear-gradient(90deg,${T.accent},${T.purple}50)`,
@@ -1128,7 +1130,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
           onMouseLeave={e=>{e.currentTarget.style.background=T.cardLight;e.currentTarget.style.transform="scale(1)";}}>
           −
         </button>
-        <span style={{color:T.text, fontWeight:800, fontSize:12, minWidth:42, textAlign:"center", fontFamily:"monospace"}}>
+        <span style={{color:T.text, fontWeight:800, fontSize:13, minWidth:44, textAlign:"center", fontFamily:"monospace"}}>
           {fmtPct(follower.riskPct)}
         </span>
         <button onClick={()=>{playClick(); onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2));}}
@@ -1161,15 +1163,15 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           {/* Botones visibles directamente */}
           <div style={{display:"flex", gap:4}}>
-            <ActionBtn icon="📋" label="Operaciones"          variant="log"    onClick={()=>onLog(follower)}/>
-            <ActionBtn icon="🗑" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
+            <ActionBtn icon="📋" text="Ops"      label="Ver operaciones"  variant="log"    onClick={()=>onLog(follower)}/>
+            <ActionBtn icon="🗑" text="Eliminar" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
           </div>
           {/* Ping y última op */}
           <div style={{textAlign:"right"}}>
             <div style={{color:T.textMuted, fontSize:10}}>
               <b style={{color:T.textSec}}>{follower.ping}ms</b>
             </div>
-            <div style={{color:T.textMuted, fontSize:9, marginTop:1}}>{follower.lastOp}</div>
+            <div style={{color:T.textMuted, fontSize:11, marginTop:2}}>{follower.lastOp}</div>
           </div>
         </div>
 
@@ -1343,7 +1345,7 @@ const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDel
     <div>
       <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
         <div>
-          <h3 style={{margin:0, color:T.text, fontSize:15, fontWeight:800}}>
+          <h3 style={{margin:0, color:T.text, fontSize:16, fontWeight:800}}>
             Cuentas que copian esta maestra
           </h3>
           <div style={{color:T.textMuted, fontSize:11, marginTop:3}}>
@@ -2239,7 +2241,7 @@ function CopyTradeApp() {
                 }}>{activeMaster.tag}</div>
                 <div>
                   <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
-                    <h2 style={{margin:0, fontSize:18, fontWeight:900, color:T.text}}>
+                    <h2 style={{margin:0, fontSize:20, fontWeight:900, color:T.text}}>
                       {activeMaster.name}
                     </h2>
                     <Dot status={activeMaster.status}/>
@@ -2248,7 +2250,7 @@ function CopyTradeApp() {
                     </span>
                     {activeMaster.readOnly && <Badge label="Solo lectura" color={T.warn}/>}
                   </div>
-                  <div style={{color:T.textMuted, fontSize:12, marginTop:3}}>
+                  <div style={{color:T.textMuted, fontSize:13, marginTop:4}}>
                     {activeMaster.broker} · {activeMaster.platform} · {activeMaster.accountNum}
                   </div>
                 </div>
