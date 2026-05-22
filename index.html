@@ -1881,12 +1881,12 @@ function CopyTradeApp() {
     };
     try {
       // ORDER BY created_at → siempre llegan en orden de creación
-      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*&order=created_at.asc`, { headers: h });
+      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*`, { headers: h });
       if (!rM.ok) return;
       const maestras = await rM.json();
       if (!maestras || maestras.length === 0) return;
 
-      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*&order=created_at.asc`, { headers: h });
+      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*`, { headers: h });
       const receptoras = rR.ok ? await rR.json() : [];
 
       const hoy = new Date().toISOString().split("T")[0];
