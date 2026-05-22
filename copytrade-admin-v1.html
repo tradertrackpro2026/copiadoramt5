@@ -1356,6 +1356,7 @@ function changePlan(id) {
   var currentPlan    = lic.plan || 'basic';
   var currentMasters = lic.maxMasters   >= 999 ? 0 : lic.maxMasters;
   var currentFollows = lic.maxFollowers >= 999 ? 0 : lic.maxFollowers;
+  var currentDevices = lic.maxActivations >= 999 ? 0 : lic.maxActivations;
 
   var overlay = document.createElement('div');
   overlay.id = 'plan-edit-overlay';
@@ -1407,11 +1408,13 @@ function onPlanEditChange() {
   var plan = document.getElementById('pe-plan').value;
   var mEl  = document.getElementById('pe-masters');
   var fEl  = document.getElementById('pe-followers');
+  var dEl  = document.getElementById('pe-devices');
   if (!mEl || !fEl) return;
   var limits = PLAN_LIMITS[plan];
   if (limits) {
     mEl.value = limits.maxMasters   >= 999 ? 0 : limits.maxMasters;
     fEl.value = limits.maxFollowers >= 999 ? 0 : limits.maxFollowers;
+    if (dEl) dEl.value = limits.maxDevices >= 999 ? 0 : limits.maxDevices;
   }
 }
 
@@ -1423,21 +1426,33 @@ async function applyPlanEdit(id) {
   if (isNaN(masters) || masters < 0) { showToast('❌ Maestras: número válido (0 o más)', 'var(--red)'); return; }
   if (isNaN(follows) || follows < 0) { showToast('❌ Followers: número válido (0 o más)', 'var(--red)'); return; }
 
+  var devicesEl = document.getElementById('pe-devices');
+  var devices   = devicesEl ? parseInt(devicesEl.value) : null;
+  if (devices !== null && (isNaN(devices) || devices < 0)) { showToast('❌ Dispositivos: número válido (0 o más)', 'var(--red)'); return; }
+
   // 0 → 999 (ilimitado práctico)
   var storedM = masters === 0 ? 999 : masters;
   var storedF = follows === 0 ? 999 : follows;
+  var storedD = (devices === null || devices === 0) ? 999 : devices;
 
   var overlay = document.getElementById('plan-edit-overlay');
   if (overlay) overlay.remove();
 
   await patchLicense(id, {
-    plan:         { stringValue:  plan },
-    maxMasters:   { integerValue: String(storedM) },
-    maxFollowers: { integerValue: String(storedF) }
+    plan:           { stringValue:  plan },
+    maxMasters:     { integerValue: String(storedM) },
+    maxFollowers:   { integerValue: String(storedF) },
+    maxActivations: { integerValue: String(storedD) }
   });
 
   var planLabel = plan === 'vip' ? '👑 VIP' : plan === 'pro' ? '🔷 Pro' : plan === 'custom' ? '⚙️ Custom' : '🔵 Basic';
-  showToast('✅ Plan actualizado: ' + planLabel + ' | M:' + (storedM>=999?'∞':storedM) + ' F:' + (storedF>=999?'∞':storedF), 'var(--green)');
+  showToast(
+    '✅ Plan actualizado: ' + planLabel +
+    ' | M:' + (storedM>=999?'∞':storedM) +
+    ' F:' + (storedF>=999?'∞':storedF) +
+    ' | Disp:' + (storedD>=999?'∞':storedD),
+    'var(--green)'
+  );
   loadLicenses();
 }
 
