@@ -15,6 +15,7 @@
     ::-webkit-scrollbar-track{background:#0c1220;}
     ::-webkit-scrollbar-thumb{background:#1c2d45;border-radius:3px;}
     ::-webkit-scrollbar-thumb:hover{background:#24385a;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
   </style>
 </head>
 <body>
@@ -1133,7 +1134,150 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
 };
 
 /* ================================================================
-   § 15  COMPONENTE — TABLA DE CUENTAS RECEPTORAS
+   § 15b COMPONENTE — DRAWER LATERAL DE RECEPTORAS
+   ─────────────────────────────────────────────────────────────────
+   Panel deslizante desde la derecha que muestra las receptoras.
+   Se abre con el botón "Cuentas receptoras" del panel de maestra.
+   No afecta el layout principal.
+   ================================================================ */
+const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
+  if (!master) return null;
+  const followerLimitReached = maxFollowers < 999 && totalFollowers >= maxFollowers;
+  return (
+    <>
+      {/* Overlay */}
+      {open && (
+        <div onClick={onClose} style={{
+          position:"fixed", inset:0, zIndex:300,
+          background:"rgba(0,0,0,0.4)", backdropFilter:"blur(2px)",
+        }}/>
+      )}
+      {/* Drawer */}
+      <div style={{
+        position:"fixed", top:0, right:0, bottom:0, zIndex:400,
+        width: open ? "min(520px, 95vw)" : 0,
+        background:T.bg, borderLeft:`1px solid ${T.border}`,
+        overflow:"hidden", transition:"width 0.28s cubic-bezier(0.4,0,0.2,1)",
+        display:"flex", flexDirection:"column",
+        boxShadow: open ? "-20px 0 60px rgba(0,0,0,0.6)" : "none",
+      }}>
+        {open && (
+          <>
+            {/* Header del drawer */}
+            <div style={{
+              padding:"16px 20px", borderBottom:`1px solid ${T.border}`,
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              flexShrink:0,
+            }}>
+              <div>
+                <div style={{color:T.text, fontWeight:800, fontSize:15}}>
+                  Cuentas receptoras
+                </div>
+                <div style={{color:T.textMuted, fontSize:11, marginTop:2}}>
+                  {master.name} · {master.followers.filter(f=>f.enabled).length} activas · {master.followers.filter(f=>!f.enabled).length} pausadas
+                </div>
+              </div>
+              <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                {!followerLimitReached ? (
+                  <Btn variant="primary" onClick={()=>onAddFollower(master.id)} size="sm">
+                    + Nueva receptora
+                  </Btn>
+                ) : (
+                  <span style={{color:T.warn, fontSize:11, fontWeight:700}}>🔒 Límite alcanzado</span>
+                )}
+                <button onClick={onClose} style={{
+                  background:T.cardLight, border:`1px solid ${T.border}`,
+                  borderRadius:8, width:32, height:32, cursor:"pointer",
+                  color:T.textSec, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center",
+                }}>✕</button>
+              </div>
+            </div>
+
+            {/* Lista de receptoras */}
+            <div style={{flex:1, overflowY:"auto", padding:"12px 16px"}}>
+              {master.followers.length === 0 ? (
+                <div style={{
+                  textAlign:"center", padding:"60px 20px",
+                  color:T.textMuted, fontSize:13,
+                }}>
+                  <div style={{fontSize:32, marginBottom:12}}>📡</div>
+                  <div style={{fontWeight:700, marginBottom:6}}>Sin cuentas receptoras</div>
+                  <div style={{fontSize:12}}>Agrega una receptora para empezar a copiar operaciones.</div>
+                </div>
+              ) : (
+                <div style={{display:"flex", flexDirection:"column", gap:10}}>
+                  {master.followers.map(f=>(
+                    <div key={f.id} style={{
+                      background:T.card, border:`1px solid ${T.border}`,
+                      borderRadius:12, padding:"14px 16px",
+                    }}>
+                      {/* Row 1: info + toggle + menú */}
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+                        <div style={{display:"flex", alignItems:"center", gap:10}}>
+                          <div style={{
+                            width:32, height:32, borderRadius:8, flexShrink:0,
+                            background:T.cardLight, display:"flex", alignItems:"center",
+                            justifyContent:"center", fontWeight:800, fontSize:11, color:T.textSec,
+                          }}>{f.tag}</div>
+                          <div>
+                            <div style={{color:T.text, fontWeight:700, fontSize:13}}>{f.name}</div>
+                            <div style={{color:T.textMuted, fontSize:11}}>{f.accountNum || f.id}</div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex", alignItems:"center", gap:8}}>
+                          <div>
+                            <Dot status={f.status}/>
+                          </div>
+                          <Toggle on={f.enabled} onChange={()=>onToggle(f.id)} size="sm"/>
+                          <button onClick={()=>{onEdit(f);}} style={{
+                            background:T.cardLight, border:`1px solid ${T.border}`,
+                            borderRadius:6, padding:"4px 8px", color:T.textSec,
+                            fontSize:11, cursor:"pointer",
+                          }}>✏️</button>
+                          <button onClick={()=>onLog(f)} style={{
+                            background:T.cardLight, border:`1px solid ${T.border}`,
+                            borderRadius:6, padding:"4px 8px", color:T.textSec,
+                            fontSize:11, cursor:"pointer",
+                          }}>📋</button>
+                          <button onClick={()=>onDelete(f.id)} style={{
+                            background:"rgba(255,56,96,.08)", border:`1px solid ${T.err}30`,
+                            borderRadius:6, padding:"4px 8px", color:T.err,
+                            fontSize:11, cursor:"pointer",
+                          }}>🗑️</button>
+                        </div>
+                      </div>
+                      {/* Row 2: balance + riesgo + ping */}
+                      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8}}>
+                        <div style={{background:T.cardLight, borderRadius:8, padding:"8px 10px"}}>
+                          <div style={{color:T.textMuted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:2}}>Balance</div>
+                          <div style={{color:T.text, fontWeight:800, fontSize:13}}>{fmt$(f.balance)}</div>
+                        </div>
+                        <div style={{background:T.cardLight, borderRadius:8, padding:"8px 10px"}}>
+                          <div style={{color:T.textMuted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4}}>Riesgo/op</div>
+                          <div style={{display:"flex", alignItems:"center", gap:4}}>
+                            <button onClick={()=>onRisk(f.id, Math.max(0.01,+(f.riskPct-0.01).toFixed(2)))}
+                              style={{width:18,height:18,borderRadius:4,border:`1px solid ${T.border}`,background:T.card,color:T.text,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                            <span style={{color:T.text,fontWeight:800,fontSize:12,minWidth:38,textAlign:"center",fontFamily:"monospace"}}>{fmtPct(f.riskPct)}</span>
+                            <button onClick={()=>onRisk(f.id,+(f.riskPct+0.01).toFixed(2))}
+                              style={{width:18,height:18,borderRadius:4,border:`1px solid ${T.border}`,background:T.card,color:T.text,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                          </div>
+                        </div>
+                        <div style={{background:T.cardLight, borderRadius:8, padding:"8px 10px"}}>
+                          <div style={{color:T.textMuted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:2}}>Ping</div>
+                          <div style={{color:T.textSec, fontWeight:800, fontSize:13}}>{f.ping}ms</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+};
    ─────────────────────────────────────────────────────────────────
    Encabezados de tabla + listado de FollowerRow.
    Modifica aquí solo si quieres agregar/quitar columnas de la tabla.
@@ -1325,39 +1469,50 @@ const PlanBar = ({ licenseInfo, masters, onLogout }) => {
 };
 
 /* ================================================================
-   § 16  COMPONENTE — PANEL DE ALERTAS
+   § 16  COMPONENTE — ALERTAS FLOTANTES
    ─────────────────────────────────────────────────────────────────
-   Aparece solo cuando hay copias fallidas o cuentas desconectadas.
-   Modifica solo aquí para cambiar el comportamiento de alertas.
+   Aparece flotando arriba a la derecha. No empuja el contenido.
+   Cada alerta se puede cerrar individualmente.
    ================================================================ */
 const AlertsPanel = ({ masters }) => {
-  const alerts = [];
+  const allAlerts = [];
   masters.forEach(m=>{
     m.followers.filter(f=>f.failedCopies>0).forEach(f=>{
-      alerts.push({ type:"failed", masterName:m.name, followerName:f.name, count:f.failedCopies });
+      allAlerts.push({ id:`fail-${m.id}-${f.id}`, type:"failed", masterName:m.name, followerName:f.name, count:f.failedCopies });
     });
-    m.followers.filter(f=>f.status!=="connected" && f.enabled).forEach(f=>{
-      alerts.push({ type:"offline", masterName:m.name, followerName:f.name });
+    m.followers.filter(f=>f.status!=="connected"&&f.status!=="online"&&f.enabled).forEach(f=>{
+      allAlerts.push({ id:`off-${m.id}-${f.id}`, type:"offline", masterName:m.name, followerName:f.name });
     });
-    if (m.status!=="online" && m.copierOn) {
-      alerts.push({ type:"master_offline", masterName:m.name });
+    if (m.status!=="online"&&m.copierOn) {
+      allAlerts.push({ id:`moff-${m.id}`, type:"master_offline", masterName:m.name });
     }
   });
-  if (alerts.length===0) return null;
+  const [dismissed, setDismissed] = useState([]);
+  const visible = allAlerts.filter(a=>!dismissed.includes(a.id));
+  if (visible.length===0) return null;
   return (
     <div style={{
-      background:T.errLow, border:`1px solid ${T.err}40`,
-      borderRadius:12, padding:"12px 16px", marginBottom:18,
+      position:"fixed", top:72, right:20, zIndex:500,
+      display:"flex", flexDirection:"column", gap:8, maxWidth:360,
     }}>
-      <div style={{color:T.err, fontWeight:800, fontSize:13, marginBottom:8}}>
-        ⚠ {alerts.length} alerta(s) activa(s)
-      </div>
-      {alerts.map((a,i)=>(
-        <div key={i} style={{color:T.err, fontSize:12, marginBottom:3, display:"flex", alignItems:"center", gap:6}}>
-          <span>•</span>
-          {a.type==="failed"        && <span><b>{a.followerName}</b> — {a.count} copia(s) fallida(s) en <b>{a.masterName}</b></span>}
-          {a.type==="offline"       && <span><b>{a.followerName}</b> desconectada (maestra: <b>{a.masterName}</b>)</span>}
-          {a.type==="master_offline"&& <span>Cuenta maestra <b>{a.masterName}</b> offline con copiadora activa</span>}
+      {visible.map(a=>(
+        <div key={a.id} style={{
+          background:"#1a0810", border:`1px solid ${T.err}50`,
+          borderRadius:10, padding:"10px 14px",
+          display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10,
+          boxShadow:"0 4px 20px rgba(0,0,0,0.5)",
+          animation:"fadeIn 0.2s ease",
+        }}>
+          <div style={{fontSize:12, color:T.err, lineHeight:1.5}}>
+            <span style={{fontWeight:800}}>⚠ </span>
+            {a.type==="failed"         && <span><b>{a.followerName}</b> — {a.count} copia(s) fallida(s)</span>}
+            {a.type==="offline"        && <span><b>{a.followerName}</b> desconectada</span>}
+            {a.type==="master_offline" && <span>Maestra <b>{a.masterName}</b> offline</span>}
+          </div>
+          <button onClick={()=>setDismissed(p=>[...p,a.id])} style={{
+            background:"transparent", border:"none", color:T.err,
+            cursor:"pointer", fontSize:14, lineHeight:1, padding:"0 2px", flexShrink:0,
+          }}>✕</button>
         </div>
       ))}
     </div>
@@ -1443,6 +1598,7 @@ function CopyTradeApp() {
   const [editingFollower, setEditing]   = useState(null);
   const [logFollowerFilter, setLogFilt] = useState(null);
   const [addFollowerFor, setAddFor]     = useState(null);
+  const [drawerOpen, setDrawerOpen]     = useState(false);
 
   const close  = () => { setModal(null); setEditing(null); setLogFilt(null); setAddFor(null); };
   const activeMaster = masters.find(m=>m.id===activeMId) || masters[0];
@@ -1830,10 +1986,10 @@ function CopyTradeApp() {
         onOpenEAParams={()=>setModal("eaParams")}
       />
 
-      {/* ── Contenido principal — scroll solo en receptoras ── */}
-      <div style={{flex:1, overflow:"hidden", display:"flex", flexDirection:"column", padding:"20px 28px 0"}}>
+      {/* ── Contenido principal — compacto y sin scroll global ── */}
+      <div style={{flex:1, overflow:"hidden", display:"flex", flexDirection:"column", padding:"14px 22px 0"}}>
 
-        {/* Parte fija — plan bar, alertas, tabs, stats */}
+        {/* Parte fija */}
         <div style={{flexShrink:0}}>
 
         {/* §19 Barra de plan */}
@@ -1849,7 +2005,7 @@ function CopyTradeApp() {
             return (order[a.status]||1) - (order[b.status]||1);
           }).map(m=>(
             <MasterTab key={m.id} master={m} active={m.id===activeMId}
-              onClick={()=>setActiveMId(m.id)}
+              onClick={()=>{ setActiveMId(m.id); setDrawerOpen(false); }}
               onDelete={deleteMaster}
             />
           ))}
@@ -1927,6 +2083,9 @@ function CopyTradeApp() {
                 <Btn variant="success" onClick={()=>doClose("pos")} size="sm">✅ Cerrar positivas</Btn>
                 <Btn variant="danger"  onClick={()=>doClose("neg")} size="sm">❌ Cerrar negativas</Btn>
                 <Btn variant="ghost"   onClick={()=>setModal("logs")} size="sm">📋 Log</Btn>
+                <Btn variant="primary" onClick={()=>setDrawerOpen(true)} size="sm">
+                  👥 Receptoras ({activeMaster.followers.length})
+                </Btn>
                 {/* Toggle copiadora */}
                 <div style={{
                   display:"flex", alignItems:"center", gap:8,
@@ -1950,24 +2109,22 @@ function CopyTradeApp() {
 
         </div>{/* fin parte fija */}
 
-        {/* §15 Tabla de followers — scroll propio */}
-        <div style={{flex:1, overflowY:"auto", paddingBottom:20}}>
-        {activeMaster && (
-          <FollowersTable
-            master={activeMaster}
-            onAddFollower={mid=>{ setAddFor(mid); setModal("newFollower"); }}
-            onToggle={toggleFollower}
-            onRisk={updateRisk}
-            onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
-            onDelete={deleteFollower}
-            onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
-            maxFollowers={maxFollowers}
-            totalFollowers={totalFollowers}
-          />
-        )}
-        </div>
-
       </div>{/* fin contenido principal */}
+
+      {/* §15b Drawer de receptoras */}
+      <DrawerFollowers
+        master={activeMaster}
+        open={drawerOpen}
+        onClose={()=>setDrawerOpen(false)}
+        onAddFollower={mid=>{ setAddFor(mid); setModal("newFollower"); }}
+        onToggle={toggleFollower}
+        onRisk={updateRisk}
+        onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
+        onDelete={deleteFollower}
+        onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
+        maxFollowers={maxFollowers}
+        totalFollowers={totalFollowers}
+      />
 
       {/* ================================================================
           MODALES
