@@ -367,11 +367,13 @@ button:active{transform:translateY(0)}
           <label>Dispositivos</label>
           <select id="new-max">
             <option value="1">1 dispositivo</option>
-            <option value="2" selected>2 dispositivos</option>
+            <option value="2">2 dispositivos</option>
             <option value="3">3 dispositivos</option>
-            <option value="5">5 dispositivos</option>
+            <option value="5" selected>5 dispositivos (Basic)</option>
             <option value="10">10 dispositivos</option>
-            <option value="999">Ilimitado</option>
+            <option value="20">20 dispositivos (Pro)</option>
+            <option value="50">50 dispositivos</option>
+            <option value="999">Ilimitado (VIP)</option>
           </select>
         </div>
         <button class="btn-g btn-create" onclick="createLicenses()" style="white-space:nowrap;padding:10px 20px">✅ Crear Lote</button>
@@ -457,9 +459,10 @@ var ADMIN_PASSWORD = '123789';
 // ═══════════════════════════════════════════════════════════
 
 var PLAN_LIMITS = {
-  basic: { maxMasters: 1,   maxFollowers: 3   },
-  pro:   { maxMasters: 3,   maxFollowers: 10  },
-  vip:   { maxMasters: 999, maxFollowers: 999 }
+  basic:  { maxMasters: 1,   maxFollowers: 3,   maxDevices: 5   },
+  pro:    { maxMasters: 3,   maxFollowers: 10,  maxDevices: 20  },
+  vip:    { maxMasters: 999, maxFollowers: 999, maxDevices: 999 },
+  custom: { maxMasters: 1,   maxFollowers: 3,   maxDevices: 5   },
 };
 
 var FB_BASE = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents/licenses';
@@ -916,8 +919,10 @@ function copyEmpresaCodes(empresa) {
 function onPlanChange() {
   var plan = document.getElementById('new-plan').value;
   var limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
-  document.getElementById('new-masters').value   = limits.maxMasters >= 999 ? 999 : limits.maxMasters;
+  document.getElementById('new-masters').value   = limits.maxMasters   >= 999 ? 999 : limits.maxMasters;
   document.getElementById('new-followers').value = limits.maxFollowers >= 999 ? 999 : limits.maxFollowers;
+  var maxEl = document.getElementById('new-max');
+  if (maxEl) maxEl.value = limits.maxDevices >= 999 ? 999 : limits.maxDevices;
 }
 
 async function createLicenses() {
