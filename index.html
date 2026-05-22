@@ -1379,6 +1379,29 @@ function CopyTradeApp() {
     return ()=>clearInterval(iv);
   }, []);
 
+  // ── § 0b  Re-validar licencia al cargar → trae plan actualizado de Firebase ──
+  // Si el admin cambió el plan, el cliente solo necesita refrescar la página.
+  useEffect(() => {
+    const key = licenseInfo?.key;
+    if (!key) return;
+    validateLicense(key).then(result => {
+      if (result.valid) {
+        // Actualizar con los límites frescos del Worker
+        const updated = { key, ...result, valid: true };
+        setLicenseInfo(updated);
+        try { localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      } else if (result.error && (
+        result.error.includes("revocada") ||
+        result.error.includes("encontrada")
+      )) {
+        // Licencia revocada o eliminada → cerrar sesión
+        localStorage.removeItem(LICENSE_STORAGE_KEY);
+        setLicenseInfo(null);
+      }
+      // Si hay error de red, dejamos los datos cacheados sin cambios
+    });
+  }, []); // Solo al montar — el cliente refresca para ver cambios de plan
+
   // ── Simulación de variación de equity (solo cuando NO hay Supabase) ──
   useEffect(()=>{
     if (supaConfig?.url) return; // Supabase conectado → datos reales, sin simulación
