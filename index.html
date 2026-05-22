@@ -507,60 +507,76 @@ const Logo = () => (
 /* ================================================================
    § 7  MODAL — NUEVA CUENTA MAESTRA
    ─────────────────────────────────────────────────────────────────
-   Formulario para agregar una cuenta maestra.
-   Al confirmar simula conexión y auto-detecta el balance via EA.
+   Formulario simplificado. Solo Broker es editable.
+   El ID y nombre se auto-generan en secuencia (MA-001, MA-002...).
+   El balance, equity y número de cuenta los detecta el EA Maestro.
    ================================================================ */
-const ModalNewMaster = ({ onClose, onAdd }) => {
-  const [f, setF] = useState({ name:"", broker:BROKERS_LIST[0], platform:"MT5", accountNum:"", connecting:false });
+const ModalNewMaster = ({ onClose, onAdd, masterCount }) => {
+  const nextNum   = String(masterCount + 1).padStart(3, "0");
+  const autoId    = `MA-${nextNum}`;
+  const autoName  = `Master Account ${masterCount + 1}`;
+  const [f, setF] = useState({ broker: BROKERS_LIST[0], connecting: false });
   const set = k => v => setF(p=>({...p,[k]:v}));
 
   const handleConnect = () => {
-    if (!f.name || !f.accountNum) return;
     setF(p=>({...p, connecting:true}));
-    // Simula detección automática de balance via EA (en producción: llega de Supabase)
     setTimeout(() => {
       onAdd({
-        id:`MA-${uid()}`, tag:`M${Math.floor(Math.random()*90)+10}`,
-        name:f.name, broker:f.broker, platform:f.platform, accountNum:f.accountNum,
-        status:"online",
-        balance:  +(10000 + Math.random()*40000).toFixed(2),
-        equity:   +(10000 + Math.random()*40000).toFixed(2),
-        openPnL:  +((Math.random()-0.3)*800).toFixed(2),
-        copierOn:true, readOnly:false, opsToday:0, followers:[],
+        id: autoId,
+        tag: `M${masterCount + 1}`,
+        name: autoName,
+        broker: f.broker,
+        platform: "MT5",
+        accountNum: "",
+        status: "offline",
+        balance: 0, equity: 0, openPnL: 0,
+        copierOn: true, readOnly: false, opsToday: 0, followers: [],
       });
       onClose();
-    }, 2200);
+    }, 1200);
   };
 
   return (
     <ModalWrap onClose={onClose}>
       <ModalHd title="+ Nueva cuenta maestra" onClose={onClose}/>
-      <Field label="Nombre de la cuenta">
-        <Inp value={f.name} onChange={set("name")} placeholder="Ej: Cuenta FTMO Principal"/>
-      </Field>
-      <div style={{display:"flex", gap:12}}>
-        <Field label="Broker" half><Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/></Field>
-        <Field label="Plataforma" half><Sel value={f.platform} onChange={set("platform")} options={["MT5","MT4"]}/></Field>
+
+      {/* ID y nombre auto-generados — solo informativo */}
+      <div style={{
+        background: T.cardLight, border:`1px solid ${T.border}`,
+        borderRadius:10, padding:"12px 16px", marginBottom:16,
+        display:"flex", gap:24,
+      }}>
+        <div>
+          <div style={{color:T.textMuted, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px", marginBottom:3}}>ID de la cuenta</div>
+          <div style={{color:T.accent, fontWeight:900, fontFamily:"monospace", fontSize:15}}>{autoId}</div>
+        </div>
+        <div>
+          <div style={{color:T.textMuted, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px", marginBottom:3}}>Nombre</div>
+          <div style={{color:T.text, fontWeight:700, fontSize:14}}>{autoName}</div>
+        </div>
       </div>
-      <Field label="Número de cuenta MT5">
-        <Inp value={f.accountNum} onChange={set("accountNum")} placeholder="#12345678"/>
+
+      <Field label="Broker">
+        <Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/>
       </Field>
+
       <Banner color={T.accent}>
         <b>📡 Conexión automática via EA:</b><br/>
         1. Instala el <b>EA Maestro</b> en tu MT5<br/>
-        2. El EA detecta el balance, equity y operaciones en tiempo real<br/>
-        3. Envía los datos a tu Supabase configurado en § 4<br/>
+        2. Configura el <b>ID: {autoId}</b> en los parámetros del EA<br/>
+        3. El EA detecta balance, equity y operaciones en tiempo real<br/>
         4. El estado cambiará a <b style={{color:T.ok}}>En línea</b> automáticamente
       </Banner>
+
       {f.connecting && (
         <div style={{textAlign:"center", padding:"12px 0", color:T.accent, fontWeight:700}}>
-          ⟳ Conectando y detectando balance...
+          ⟳ Registrando cuenta...
         </div>
       )}
       <div style={{display:"flex", gap:10, justifyContent:"flex-end", marginTop:4}}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="primary" onClick={handleConnect} disabled={!f.name||!f.accountNum||f.connecting}>
-          {f.connecting ? "Conectando..." : "Conectar cuenta"}
+        <Btn variant="primary" onClick={handleConnect} disabled={f.connecting}>
+          {f.connecting ? "Registrando..." : "Agregar cuenta"}
         </Btn>
       </div>
     </ModalWrap>
@@ -570,79 +586,78 @@ const ModalNewMaster = ({ onClose, onAdd }) => {
 /* ================================================================
    § 8  MODAL — NUEVA CUENTA RECEPTORA
    ─────────────────────────────────────────────────────────────────
-   Formulario para agregar una cuenta follower a una maestra.
-   Al conectar, auto-detecta el balance de esa cuenta MT5.
+   Formulario simplificado. Solo Broker es editable.
+   El ID y nombre se auto-generan en secuencia (F-001, F-002...).
+   El balance y configuración los maneja el EA Follower en MT5.
    ================================================================ */
-const ModalNewFollower = ({ masterId, onClose, onAdd }) => {
-  const [f, setF] = useState({
-    name:"", broker:BROKERS_LIST[0], platform:"MT5", accountNum:"",
-    capitalPct:50, riskPct:0.50, delayMs:0, readOnly:false, connecting:false,
-  });
+const ModalNewFollower = ({ masterId, onClose, onAdd, followerCount }) => {
+  const nextNum  = String(followerCount + 1).padStart(3, "0");
+  const autoId   = `F-${nextNum}`;
+  const autoName = `Follower Account ${followerCount + 1}`;
+  const [f, setF] = useState({ broker: BROKERS_LIST[0], connecting: false });
   const set = k => v => setF(p=>({...p,[k]:v}));
 
   const handleAdd = () => {
-    if (!f.name || !f.accountNum) return;
     setF(p=>({...p, connecting:true}));
     setTimeout(() => {
-      const num = f.accountNum.replace(/\D/g,"").slice(-2)||"01";
       onAdd(masterId, {
-        id:`F-${uid()}`, tag:`R${num}`,
-        name:f.name, broker:f.broker, platform:f.platform, accountNum:f.accountNum,
-        status:"connected",
-        balance:  +(5000 + Math.random()*25000).toFixed(2),
-        capitalPct:+f.capitalPct, riskPct:+f.riskPct, delayMs:+f.delayMs,
-        readOnly:f.readOnly, enabled:true,
-        ping: 15+Math.round(Math.random()*55), failedCopies:0, lastOp:"—",
+        id: autoId,
+        tag: `R${followerCount + 1}`,
+        name: autoName,
+        broker: f.broker,
+        platform: "MT5",
+        accountNum: "",
+        status: "offline",
+        balance: 0,
+        capitalPct: 50, riskPct: 0.5, delayMs: 0,
+        readOnly: false, enabled: true,
+        ping: 0, failedCopies: 0, lastOp: "—",
       });
       onClose();
-    }, 1800);
+    }, 1200);
   };
 
   return (
     <ModalWrap onClose={onClose}>
       <ModalHd title="+ Nueva cuenta receptora" onClose={onClose}/>
-      <Field label="Nombre de la cuenta">
-        <Inp value={f.name} onChange={set("name")} placeholder="Ej: Cuenta FTMO Follower"/>
+
+      {/* ID y nombre auto-generados — solo informativo */}
+      <div style={{
+        background: T.cardLight, border:`1px solid ${T.border}`,
+        borderRadius:10, padding:"12px 16px", marginBottom:16,
+        display:"flex", gap:24,
+      }}>
+        <div>
+          <div style={{color:T.textMuted, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px", marginBottom:3}}>ID de la receptora</div>
+          <div style={{color:T.ok, fontWeight:900, fontFamily:"monospace", fontSize:15}}>{autoId}</div>
+        </div>
+        <div>
+          <div style={{color:T.textMuted, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px", marginBottom:3}}>Nombre</div>
+          <div style={{color:T.text, fontWeight:700, fontSize:14}}>{autoName}</div>
+        </div>
+      </div>
+
+      <Field label="Broker">
+        <Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/>
       </Field>
-      <div style={{display:"flex", gap:12}}>
-        <Field label="Broker" half><Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/></Field>
-        <Field label="Plataforma" half><Sel value={f.platform} onChange={set("platform")} options={["MT5","MT4"]}/></Field>
-      </div>
-      <Field label="Número de cuenta MT5">
-        <Inp value={f.accountNum} onChange={set("accountNum")} placeholder="#12345678"/>
-      </Field>
-      <div style={{display:"flex", gap:12}}>
-        <Field label="% Asignación capital" half>
-          <Inp type="number" value={f.capitalPct} onChange={set("capitalPct")} min={1} max={100} step={1} placeholder="50"/>
-        </Field>
-        <Field label="% Riesgo por operación" half>
-          <Inp type="number" value={f.riskPct} onChange={set("riskPct")} min={0.01} max={10} step={0.01} placeholder="0.50"/>
-        </Field>
-      </div>
-      <div style={{display:"flex", gap:12}}>
-        <Field label="Delay de copia (ms)" half>
-          <Inp type="number" value={f.delayMs} onChange={set("delayMs")} min={0} max={5000} step={100} placeholder="0"/>
-        </Field>
-        <Field label="Modo solo lectura" half>
-          <div style={{display:"flex",alignItems:"center",gap:10,height:38,paddingLeft:4}}>
-            <Toggle on={f.readOnly} onChange={v=>set("readOnly")(v)} size="sm"/>
-            <span style={{color:T.textSec, fontSize:12}}>{f.readOnly?"Activo — no ejecuta":"Desactivado"}</span>
-          </div>
-        </Field>
-      </div>
+
       <Banner color={T.ok}>
-        Al conectar, el balance se detectará automáticamente desde MT5 via EA Follower.<br/>
-        El lote copiado = lote_master × (balance × {f.capitalPct}% / balance_master)
+        <b>📡 Conexión automática via EA:</b><br/>
+        1. Instala el <b>EA Follower</b> en tu MT5<br/>
+        2. Configura el <b>ID Receptora: {autoId}</b> en los parámetros del EA<br/>
+        3. Configura el <b>ID Maestra: {masterId}</b> en los parámetros del EA<br/>
+        4. El riesgo y balance se configuran directamente en el EA
       </Banner>
+
       {f.connecting && (
         <div style={{textAlign:"center", padding:"10px 0", color:T.ok, fontWeight:700}}>
-          ⟳ Detectando cuenta y balance...
+          ⟳ Registrando cuenta receptora...
         </div>
       )}
       <div style={{display:"flex", gap:10, justifyContent:"flex-end"}}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="primary" onClick={handleAdd} disabled={!f.name||!f.accountNum||f.connecting}>
-          {f.connecting ? "Conectando..." : "Agregar cuenta"}
+        <Btn variant="primary" onClick={handleAdd} disabled={f.connecting}>
+          {f.connecting ? "Registrando..." : "Agregar cuenta"}
         </Btn>
       </div>
     </ModalWrap>
@@ -741,6 +756,97 @@ const ModalSupabase = ({ config, onClose, onSave }) => {
         <Btn variant="primary" onClick={()=>{onSave({url,key});onClose();}} disabled={!url||!key}>
           Guardar y conectar
         </Btn>
+      </div>
+    </ModalWrap>
+  );
+};
+
+/* ================================================================
+   § 20  MODAL — PARÁMETROS PARA EL EA
+   ─────────────────────────────────────────────────────────────────
+   Muestra todos los valores que el cliente debe copiar al EA.
+   Se accede desde el botón "📋 Ver parámetros EA" en el dashboard.
+   NO modifica ninguna lógica — solo lectura y copy-paste.
+   ================================================================ */
+const ModalEAParams = ({ licenseInfo, supaConfig, masters, onClose }) => {
+  const [copied, setCopied] = useState("");
+
+  const copyVal = (val, key) => {
+    navigator.clipboard.writeText(val).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(""), 1500);
+    });
+  };
+
+  const Row = ({ label, value, id }) => (
+    <div style={{
+      display:"flex", alignItems:"center", justifyContent:"space-between",
+      padding:"10px 14px", borderBottom:`1px solid ${T.border}`,
+      gap:12,
+    }}>
+      <div style={{flex:1}}>
+        <div style={{color:T.textMuted, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"1px", marginBottom:2}}>{label}</div>
+        <div style={{
+          color: T.text, fontFamily:"monospace", fontSize:12,
+          wordBreak:"break-all", lineHeight:1.5,
+        }}>{value || "—"}</div>
+      </div>
+      <button onClick={() => copyVal(value, id)} style={{
+        background: copied===id ? T.ok : T.cardLight,
+        border:`1px solid ${copied===id ? T.ok : T.border}`,
+        borderRadius:7, padding:"5px 10px", color: copied===id ? "#000" : T.textMuted,
+        fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap",
+        transition:"all 0.15s", flexShrink:0,
+      }}>
+        {copied===id ? "✓ Copiado" : "📋 Copiar"}
+      </button>
+    </div>
+  );
+
+  return (
+    <ModalWrap onClose={onClose} maxW={560}>
+      <ModalHd title="📋 Parámetros para el EA" onClose={onClose}/>
+
+      <div style={{color:T.textMuted, fontSize:12, marginBottom:14, lineHeight:1.7}}>
+        Copia estos valores exactamente en los parámetros del EA Maestro y Follower en MT5.
+      </div>
+
+      {/* Licencia y Supabase */}
+      <div style={{background:T.cardLight, borderRadius:12, overflow:"hidden", marginBottom:16, border:`1px solid ${T.border}`}}>
+        <div style={{padding:"8px 14px", background:T.card, borderBottom:`1px solid ${T.border}`, fontSize:11, fontWeight:800, color:T.textSec, textTransform:"uppercase", letterSpacing:"1px"}}>
+          🔐 Licencia y Supabase
+        </div>
+        <Row label="Código de licencia"    value={licenseInfo?.key || ""}          id="lic"/>
+        <Row label="URL de Supabase"        value={supaConfig?.url  || ""}          id="url"/>
+        <Row label="Clave anon de Supabase" value={supaConfig?.key  || ""}          id="key"/>
+      </div>
+
+      {/* IDs de cuentas */}
+      <div style={{background:T.cardLight, borderRadius:12, overflow:"hidden", border:`1px solid ${T.border}`}}>
+        <div style={{padding:"8px 14px", background:T.card, borderBottom:`1px solid ${T.border}`, fontSize:11, fontWeight:800, color:T.textSec, textTransform:"uppercase", letterSpacing:"1px"}}>
+          🖥️ IDs de cuentas
+        </div>
+        {masters.map(m => (
+          <div key={m.id}>
+            <Row label={`ID Maestra — ${m.name}`} value={m.id} id={`m-${m.id}`}/>
+            {m.followers.map(f => (
+              <Row key={f.id} label={`ID Receptora — ${f.name}`} value={f.id} id={`f-${f.id}`}/>
+            ))}
+          </div>
+        ))}
+        {masters.length === 0 && (
+          <div style={{padding:"14px", color:T.textMuted, fontSize:12, textAlign:"center"}}>
+            Agrega una cuenta maestra primero para ver sus IDs aquí.
+          </div>
+        )}
+      </div>
+
+      <div style={{marginTop:14, background:T.warnLow, border:`1px solid ${T.warn}30`, borderRadius:10, padding:"10px 14px", fontSize:11, color:T.warn, lineHeight:1.7}}>
+        ⚠️ <b>No compartas la clave anon de Supabase</b> con nadie. Solo el EA la necesita.
+      </div>
+
+      <div style={{display:"flex", justifyContent:"flex-end", marginTop:12}}>
+        <Btn variant="ghost" onClick={onClose}>Cerrar</Btn>
       </div>
     </ModalWrap>
   );
@@ -1289,7 +1395,7 @@ const AlertsPanel = ({ masters }) => {
    Barra de navegación superior con logo y botones globales.
    Modifica solo aquí para cambiar el encabezado.
    ================================================================ */
-const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode, masterLimitReached }) => (
+const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, onOpenEAParams, demoMode, masterLimitReached }) => (
   <div style={{
     display:"flex", alignItems:"center", justifyContent:"space-between",
     padding:"16px 28px", borderBottom:`1px solid ${T.border}`,
@@ -1312,6 +1418,7 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, demoMode,
         </div>
       )}
       <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Log global</Btn>
+      <Btn variant="ghost" onClick={onOpenEAParams} size="sm">🖥️ Params EA</Btn>
       <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
         {supaConfig?.url ? "🟢 Supabase" : "⚙️ Configurar Supabase"}
       </Btn>
@@ -1695,6 +1802,7 @@ function CopyTradeApp() {
         onOpenSupabase={()=>setModal("supabase")}
         onAddMaster={()=>setModal("newMaster")}
         onOpenLogs={()=>setModal("logs")}
+        onOpenEAParams={()=>setModal("eaParams")}
       />
 
       {/* ── Contenido principal ── */}
@@ -1827,14 +1935,29 @@ function CopyTradeApp() {
           Solo se renderiza uno a la vez.
           ================================================================ */}
 
+      {/* §20 Parámetros EA */}
+      {modal==="eaParams" && (
+        <ModalEAParams
+          licenseInfo={licenseInfo}
+          supaConfig={supaConfig}
+          masters={masters}
+          onClose={close}
+        />
+      )}
+
       {/* §7 Nueva maestra */}
       {modal==="newMaster" && (
-        <ModalNewMaster onClose={close} onAdd={addMaster}/>
+        <ModalNewMaster onClose={close} onAdd={addMaster} masterCount={masters.length}/>
       )}
 
       {/* §8 Nueva receptora */}
       {modal==="newFollower" && (
-        <ModalNewFollower masterId={addFollowerFor} onClose={close} onAdd={addFollower}/>
+        <ModalNewFollower
+          masterId={addFollowerFor}
+          onClose={close}
+          onAdd={addFollower}
+          followerCount={masters.reduce((acc,m)=>acc+m.followers.length,0)}
+        />
       )}
 
       {/* §9 Editar receptora */}
