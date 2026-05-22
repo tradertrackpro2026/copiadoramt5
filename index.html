@@ -1619,7 +1619,10 @@ function CopyTradeApp() {
     return ()=>clearInterval(iv);
   }, []);
 
-  // ── § 0b  Re-validar licencia al cargar → trae plan actualizado de Firebase ──
+  // Auto-abrir drawer cuando hay una maestra activa
+  useEffect(() => {
+    if (activeMId && masters.length > 0) setDrawerOpen(true);
+  }, [activeMId]);
   // Si el admin cambió el plan, el cliente solo necesita refrescar la página.
   useEffect(() => {
     const key = licenseInfo?.key;
@@ -2007,7 +2010,7 @@ function CopyTradeApp() {
             return (order[a.status]||1) - (order[b.status]||1);
           }).map(m=>(
             <MasterTab key={m.id} master={m} active={m.id===activeMId}
-              onClick={()=>{ setActiveMId(m.id); setDrawerOpen(false); }}
+              onClick={()=>{ setActiveMId(m.id); setDrawerOpen(true); }}
               onDelete={deleteMaster}
             />
           ))}
