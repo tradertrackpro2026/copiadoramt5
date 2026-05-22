@@ -515,21 +515,15 @@ const ModalNewMaster = ({ onClose, onAdd, masterCount }) => {
   const nextNum   = String(masterCount + 1).padStart(3, "0");
   const autoId    = `MA-${nextNum}`;
   const autoName  = `Master Account ${masterCount + 1}`;
-  const [f, setF] = useState({ broker: BROKERS_LIST[0], connecting: false });
-  const set = k => v => setF(p=>({...p,[k]:v}));
+  const [connecting, setConnecting] = useState(false);
 
   const handleConnect = () => {
-    setF(p=>({...p, connecting:true}));
+    setConnecting(true);
     setTimeout(() => {
       onAdd({
-        id: autoId,
-        tag: `M${masterCount + 1}`,
-        name: autoName,
-        broker: f.broker,
-        platform: "MT5",
-        accountNum: "",
-        status: "offline",
-        balance: 0, equity: 0, openPnL: 0,
+        id: autoId, tag: `M${masterCount + 1}`, name: autoName,
+        broker: "", platform: "MT5", accountNum: "",
+        status: "offline", balance: 0, equity: 0, openPnL: 0,
         copierOn: true, readOnly: false, opsToday: 0, followers: [],
       });
       onClose();
@@ -539,8 +533,6 @@ const ModalNewMaster = ({ onClose, onAdd, masterCount }) => {
   return (
     <ModalWrap onClose={onClose}>
       <ModalHd title="+ Nueva cuenta maestra" onClose={onClose}/>
-
-      {/* ID y nombre auto-generados — solo informativo */}
       <div style={{
         background: T.cardLight, border:`1px solid ${T.border}`,
         borderRadius:10, padding:"12px 16px", marginBottom:16,
@@ -555,11 +547,6 @@ const ModalNewMaster = ({ onClose, onAdd, masterCount }) => {
           <div style={{color:T.text, fontWeight:700, fontSize:14}}>{autoName}</div>
         </div>
       </div>
-
-      <Field label="Broker">
-        <Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/>
-      </Field>
-
       <Banner color={T.accent}>
         <b>📡 Conexión automática via EA:</b><br/>
         1. Instala el <b>EA Maestro</b> en tu MT5<br/>
@@ -567,16 +554,11 @@ const ModalNewMaster = ({ onClose, onAdd, masterCount }) => {
         3. El EA detecta balance, equity y operaciones en tiempo real<br/>
         4. El estado cambiará a <b style={{color:T.ok}}>En línea</b> automáticamente
       </Banner>
-
-      {f.connecting && (
-        <div style={{textAlign:"center", padding:"12px 0", color:T.accent, fontWeight:700}}>
-          ⟳ Registrando cuenta...
-        </div>
-      )}
+      {connecting && <div style={{textAlign:"center", padding:"12px 0", color:T.accent, fontWeight:700}}>⟳ Registrando cuenta...</div>}
       <div style={{display:"flex", gap:10, justifyContent:"flex-end", marginTop:4}}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="primary" onClick={handleConnect} disabled={f.connecting}>
-          {f.connecting ? "Registrando..." : "Agregar cuenta"}
+        <Btn variant="primary" onClick={handleConnect} disabled={connecting}>
+          {connecting ? "Registrando..." : "Agregar cuenta"}
         </Btn>
       </div>
     </ModalWrap>
@@ -594,21 +576,15 @@ const ModalNewFollower = ({ masterId, onClose, onAdd, followerCount }) => {
   const nextNum  = String(followerCount + 1).padStart(3, "0");
   const autoId   = `F-${nextNum}`;
   const autoName = `Follower Account ${followerCount + 1}`;
-  const [f, setF] = useState({ broker: BROKERS_LIST[0], connecting: false });
-  const set = k => v => setF(p=>({...p,[k]:v}));
+  const [connecting, setConnecting] = useState(false);
 
   const handleAdd = () => {
-    setF(p=>({...p, connecting:true}));
+    setConnecting(true);
     setTimeout(() => {
       onAdd(masterId, {
-        id: autoId,
-        tag: `R${followerCount + 1}`,
-        name: autoName,
-        broker: f.broker,
-        platform: "MT5",
-        accountNum: "",
-        status: "offline",
-        balance: 0,
+        id: autoId, tag: `R${followerCount + 1}`, name: autoName,
+        broker: "", platform: "MT5", accountNum: "",
+        status: "offline", balance: 0,
         capitalPct: 50, riskPct: 0.5, delayMs: 0,
         readOnly: false, enabled: true,
         ping: 0, failedCopies: 0, lastOp: "—",
@@ -620,8 +596,6 @@ const ModalNewFollower = ({ masterId, onClose, onAdd, followerCount }) => {
   return (
     <ModalWrap onClose={onClose}>
       <ModalHd title="+ Nueva cuenta receptora" onClose={onClose}/>
-
-      {/* ID y nombre auto-generados — solo informativo */}
       <div style={{
         background: T.cardLight, border:`1px solid ${T.border}`,
         borderRadius:10, padding:"12px 16px", marginBottom:16,
@@ -636,11 +610,6 @@ const ModalNewFollower = ({ masterId, onClose, onAdd, followerCount }) => {
           <div style={{color:T.text, fontWeight:700, fontSize:14}}>{autoName}</div>
         </div>
       </div>
-
-      <Field label="Broker">
-        <Sel value={f.broker} onChange={set("broker")} options={BROKERS_LIST}/>
-      </Field>
-
       <Banner color={T.ok}>
         <b>📡 Conexión automática via EA:</b><br/>
         1. Instala el <b>EA Follower</b> en tu MT5<br/>
@@ -648,16 +617,11 @@ const ModalNewFollower = ({ masterId, onClose, onAdd, followerCount }) => {
         3. Configura el <b>ID Maestra: {masterId}</b> en los parámetros del EA<br/>
         4. El riesgo y balance se configuran directamente en el EA
       </Banner>
-
-      {f.connecting && (
-        <div style={{textAlign:"center", padding:"10px 0", color:T.ok, fontWeight:700}}>
-          ⟳ Registrando cuenta receptora...
-        </div>
-      )}
+      {connecting && <div style={{textAlign:"center", padding:"10px 0", color:T.ok, fontWeight:700}}>⟳ Registrando cuenta receptora...</div>}
       <div style={{display:"flex", gap:10, justifyContent:"flex-end"}}>
         <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
-        <Btn variant="primary" onClick={handleAdd} disabled={f.connecting}>
-          {f.connecting ? "Registrando..." : "Agregar cuenta"}
+        <Btn variant="primary" onClick={handleAdd} disabled={connecting}>
+          {connecting ? "Registrando..." : "Agregar cuenta"}
         </Btn>
       </div>
     </ModalWrap>
@@ -927,21 +891,32 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
    ─────────────────────────────────────────────────────────────────
    Tarjeta en la fila superior. Activa al hacer click.
    ================================================================ */
-const MasterTab = ({ master, active, onClick }) => (
-  <div onClick={onClick} style={{
+const MasterTab = ({ master, active, onClick, onDelete }) => (
+  <div style={{
     background: active ? T.cardMid : T.card,
     border: `1px solid ${active ? T.accent+"70" : T.border}`,
     borderRadius:14, padding:"14px 18px", cursor:"pointer",
     minWidth:210, flexShrink:0, transition:"all 0.18s",
     boxShadow: active ? `0 0 24px ${T.accentGlow}` : "none",
     position:"relative", overflow:"hidden",
-  }}>
+  }} onClick={onClick}>
     {active && (
       <div style={{
         position:"absolute", top:0, left:0, right:0, height:2,
         background:`linear-gradient(90deg, ${T.accent}, ${T.ok})`,
       }}/>
     )}
+    {/* Botón eliminar */}
+    <button onClick={e=>{ e.stopPropagation(); if(window.confirm(`¿Eliminar "${master.name}"?`)) onDelete(master.id); }} style={{
+      position:"absolute", top:6, right:6,
+      background:"transparent", border:"none", color:T.textMuted,
+      fontSize:13, cursor:"pointer", padding:"2px 5px", borderRadius:5,
+      lineHeight:1, transition:"color 0.15s",
+    }}
+    onMouseEnter={e=>e.currentTarget.style.color=T.err}
+    onMouseLeave={e=>e.currentTarget.style.color=T.textMuted}
+    title="Eliminar maestra">✕</button>
+
     <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:7}}>
       <div style={{
         width:36, height:36, borderRadius:10, flexShrink:0,
@@ -963,7 +938,7 @@ const MasterTab = ({ master, active, onClick }) => (
       </div>
     </div>
     <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
-      {[master.broker, master.platform, master.accountNum].map((t,i)=>(
+      {[master.platform, master.accountNum].filter(Boolean).map((t,i)=>(
         <span key={i} style={{color:T.textMuted, fontSize:10}}>{i>0?"• ":""}{t}</span>
       ))}
     </div>
@@ -1580,6 +1555,18 @@ function CopyTradeApp() {
     setMasters(p=>p.map(m=>m.id===mid?{...m,copierOn:!m.copierOn}:m));
   },[]);
 
+  const deleteMaster = useCallback(async mid => {
+    if (supaConfig?.url) {
+      const h = { "apikey": supaConfig.key, "Authorization": `Bearer ${supaConfig.key}` };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras?id=eq.${mid}`, { method:"DELETE", headers:h });
+    }
+    setMasters(p => {
+      const filtered = p.filter(m => m.id !== mid);
+      setActiveMId(filtered.length > 0 ? filtered[0].id : null);
+      return filtered;
+    });
+  }, [supaConfig]);
+
   // ── Handlers: cuentas receptoras ──
   const addFollower = useCallback(async (mid, f) => {
     if (supaConfig?.url) {
@@ -1826,7 +1813,11 @@ function CopyTradeApp() {
   }
 
   return (
-    <div style={{minHeight:"100vh", background:T.bg, color:T.text, fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
+    <div style={{
+      height:"100vh", width:"100vw", background:T.bg, color:T.text,
+      fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",
+      display:"flex", flexDirection:"column", overflow:"hidden",
+    }}>
 
       {/* §17 Header */}
       <Header
@@ -1839,8 +1830,11 @@ function CopyTradeApp() {
         onOpenEAParams={()=>setModal("eaParams")}
       />
 
-      {/* ── Contenido principal ── */}
-      <div style={{padding:"24px 28px", maxWidth:1400, margin:"0 auto"}}>
+      {/* ── Contenido principal — scroll solo en receptoras ── */}
+      <div style={{flex:1, overflow:"hidden", display:"flex", flexDirection:"column", padding:"20px 28px 0"}}>
+
+        {/* Parte fija — plan bar, alertas, tabs, stats */}
+        <div style={{flexShrink:0}}>
 
         {/* §19 Barra de plan */}
         <PlanBar licenseInfo={licenseInfo} masters={masters} onLogout={handleLogout}/>
@@ -1848,10 +1842,16 @@ function CopyTradeApp() {
         {/* §16 Alertas */}
         <AlertsPanel masters={masters}/>
 
-        {/* ── Tabs de cuentas maestras ── */}
+        {/* ── Tabs de cuentas maestras — online primero ── */}
         <div style={{display:"flex", gap:12, overflowX:"auto", paddingBottom:6, marginBottom:20}}>
-          {masters.map(m=>(
-            <MasterTab key={m.id} master={m} active={m.id===activeMId} onClick={()=>setActiveMId(m.id)}/>
+          {[...masters].sort((a,b) => {
+            const order = {online:0, connected:0, offline:1, disconnected:2};
+            return (order[a.status]||1) - (order[b.status]||1);
+          }).map(m=>(
+            <MasterTab key={m.id} master={m} active={m.id===activeMId}
+              onClick={()=>setActiveMId(m.id)}
+              onDelete={deleteMaster}
+            />
           ))}
           {/* Tab "agregar nueva" — bloqueado si se alcanzó el límite */}
           {!masterLimitReached ? (
@@ -1948,7 +1948,10 @@ function CopyTradeApp() {
           </div>
         )}
 
-        {/* §15 Tabla de followers */}
+        </div>{/* fin parte fija */}
+
+        {/* §15 Tabla de followers — scroll propio */}
+        <div style={{flex:1, overflowY:"auto", paddingBottom:20}}>
         {activeMaster && (
           <FollowersTable
             master={activeMaster}
@@ -1962,7 +1965,9 @@ function CopyTradeApp() {
             totalFollowers={totalFollowers}
           />
         )}
-      </div>
+        </div>
+
+      </div>{/* fin contenido principal */}
 
       {/* ================================================================
           MODALES
