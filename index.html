@@ -841,8 +841,8 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
   }
   return (
     <ModalWrap onClose={onClose} maxW={760}>
-      <ModalHd title={title||"📋 Log de operaciones"} onClose={onClose}/>
-      <Inp value={search} onChange={setSearch} placeholder="Buscar por símbolo, follower, tipo..."/>
+      <ModalHd title={title||"📋 Operaciones"} onClose={onClose}/>
+      <Inp value={search} onChange={setSearch} placeholder="Buscar por símbolo, follower, dirección..."/>
       <div style={{marginTop:12, overflowY:"auto", maxHeight:420}}>
         {/* Encabezado tabla */}
         <div style={{
@@ -953,53 +953,50 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
    Muestra balance, equity, P&L, número de seguidores y ops del día.
    Los valores se actualizan en tiempo real desde el EA via Supabase.
    ================================================================ */
-const StatCell = ({ label, value, color, note }) => (
-  <div style={{flex:1, minWidth:120}}>
-    <div style={{color:T.textMuted, fontSize:10, marginBottom:4, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.6px"}}>
+const StatCell = ({ label, value, color, note, border=true }) => (
+  <div style={{
+    padding:"0 20px 0 0",
+    borderRight: border ? `1px solid ${T.border}` : "none",
+  }}>
+    <div style={{color:T.textMuted, fontSize:9, marginBottom:5, fontWeight:700,
+      textTransform:"uppercase", letterSpacing:"1px", whiteSpace:"nowrap"}}>
       {label}
     </div>
-    <div style={{color:color||T.text, fontSize:22, fontWeight:900, letterSpacing:"-0.5px", fontFamily:"monospace"}}>
+    <div style={{color:color||T.text, fontSize:20, fontWeight:900,
+      letterSpacing:"-0.5px", fontFamily:"monospace", lineHeight:1}}>
       {value}
     </div>
-    {note && <div style={{color:T.textMuted, fontSize:10, marginTop:3}}>{note}</div>}
+    {note && <div style={{color:T.textMuted, fontSize:10, marginTop:4}}>{note}</div>}
   </div>
 );
 
-const VertDivider = () => (
-  <div style={{width:1, background:T.border, margin:"0 18px", alignSelf:"stretch"}}/>
-);
-
 const StatsBar = ({ master }) => (
-  <div style={{display:"flex", flexWrap:"wrap", gap:0, alignItems:"center"}}>
-    <StatCell label="Balance"   value={fmt$(master.balance)}/>
-    <VertDivider/>
-    <StatCell label="Equidad"   value={fmt$(master.equity)}/>
-    <VertDivider/>
-    <StatCell
-      label="P&L Abierto"
+  <div style={{
+    display:"grid",
+    gridTemplateColumns:"repeat(6, 1fr)",
+    gap:0,
+    alignItems:"start",
+    padding:"4px 0",
+  }}>
+    <StatCell label="Balance"
+      value={fmt$(master.balance)}/>
+    <StatCell label="Equidad"
+      value={fmt$(master.equity)}/>
+    <StatCell label="P&L Abierto"
       value={(master.openPnL>=0?"+":"")+fmt$(master.openPnL)}
-      color={master.openPnL>=0 ? T.ok : T.err}
-    />
-    <VertDivider/>
-    <StatCell
-      label="Copiando a"
-      value={`${master.followers.length} cuenta${master.followers.length!==1?"s":""}`}
+      color={master.openPnL>=0 ? T.ok : T.err}/>
+    <StatCell label="Copiando a"
+      value={`${master.followers.length} cta${master.followers.length!==1?"s":""}`}
       color={T.accent}
-      note={`${master.followers.filter(f=>f.enabled).length} activa(s)`}
-    />
-    <VertDivider/>
-    <StatCell
-      label="Ops hoy"
+      note={`${master.followers.filter(f=>f.enabled).length} activa(s)`}/>
+    <StatCell label="Ops hoy"
       value={master.opsToday}
-      note="copias ejecutadas"
-    />
-    <VertDivider/>
-    <StatCell
-      label="Lotes copiados hoy"
+      note="copias ejecutadas"/>
+    <StatCell label="Lotes hoy"
       value={master.lotesHoy != null ? master.lotesHoy.toFixed(2) : "—"}
       color={T.warn}
-      note="total en receptoras"
-    />
+      note="total receptoras"
+      border={false}/>
   </div>
 );
 
@@ -1164,8 +1161,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           {/* Botones visibles directamente */}
           <div style={{display:"flex", gap:4}}>
-            <ActionBtn icon="✏️" label="Editar"          variant="edit"   onClick={()=>onEdit(follower)}/>
-            <ActionBtn icon="📋" label="Ver log"          variant="log"    onClick={()=>onLog(follower)}/>
+            <ActionBtn icon="📋" label="Operaciones"          variant="log"    onClick={()=>onLog(follower)}/>
             <ActionBtn icon="🗑" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
           </div>
           {/* Ping y última op */}
@@ -1657,7 +1653,7 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, onOpenEAP
 
       {/* ── Derecha: Acciones ── */}
       <div style={{display:"flex", gap:7, alignItems:"center", flexShrink:0}}>
-        <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Log</Btn>
+        <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Operaciones</Btn>
         <Btn variant="ghost" onClick={onOpenEAParams} size="sm">🖥️ Params EA</Btn>
         <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
           {supaConfig?.url ? "🟢 Supabase" : "⚙️ Supabase"}
@@ -1826,9 +1822,26 @@ function CopyTradeApp() {
     setActiveMId(m.id);
   }, [supaConfig]);
 
-  const toggleCopier = useCallback(mid=>{
-    setMasters(p=>p.map(m=>m.id===mid?{...m,copierOn:!m.copierOn}:m));
-  },[]);
+  const toggleCopier = useCallback(async mid => {
+    // Leer valor actual para invertirlo
+    const current = masters.find(m => m.id === mid);
+    if (!current) return;
+    const newVal = !current.copierOn;
+    // Escribir en Supabase para que el EA lo lea
+    if (supaConfig?.url) {
+      const h = {
+        "apikey": supaConfig.key,
+        "Authorization": `Bearer ${supaConfig.key}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_maestras?id=eq.${mid}`, {
+        method: "PATCH", headers: h,
+        body: JSON.stringify({ copiadora_on: newVal }),
+      });
+    }
+    setMasters(p=>p.map(m=>m.id===mid?{...m,copierOn:newVal}:m));
+  }, [supaConfig, masters]);
 
   const deleteMaster = useCallback(async mid => {
     if (supaConfig?.url) {
@@ -1866,9 +1879,33 @@ function CopyTradeApp() {
     setMasters(p=>p.map(m=>m.id===mid?{...m,followers:sortById([...m.followers,f])}:m));
   }, [supaConfig]);
 
-  const toggleFollower = useCallback(fid=>{
-    setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,enabled:!f.enabled}:f)})));
-  },[]);
+  const toggleFollower = useCallback(async fid => {
+    // Leer valor actual para invertirlo
+    let newVal = true;
+    setMasters(p => {
+      const updated = p.map(m => ({
+        ...m,
+        followers: m.followers.map(f => {
+          if (f.id === fid) { newVal = !f.enabled; return {...f, enabled: newVal}; }
+          return f;
+        })
+      }));
+      return updated;
+    });
+    // Escribir en Supabase para que el EA Follower lo lea
+    if (supaConfig?.url) {
+      const h = {
+        "apikey": supaConfig.key,
+        "Authorization": `Bearer ${supaConfig.key}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      };
+      await fetch(`${supaConfig.url}/rest/v1/cuentas_receptoras?id=eq.${fid}`, {
+        method: "PATCH", headers: h,
+        body: JSON.stringify({ activa: newVal }),
+      });
+    }
+  }, [supaConfig]);
 
   const updateRisk = useCallback((fid,val)=>{
     setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,riskPct:val}:f)})));
@@ -2217,20 +2254,43 @@ function CopyTradeApp() {
                 </div>
               </div>
 
-              {/* Botones de acción */}
-              <div style={{display:"flex", gap:7, flexWrap:"wrap", alignItems:"center"}}>
-                <Btn variant="dark"    onClick={()=>doClose("all")} size="sm">🕐 Cerrar todas</Btn>
-                <Btn variant="success" onClick={()=>doClose("pos")} size="sm">✅ Cerrar positivas</Btn>
-                <Btn variant="danger"  onClick={()=>doClose("neg")} size="sm">❌ Cerrar negativas</Btn>
-                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Log</Btn>
+              {/* Botones de acción — agrupados */}
+              <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+
+                {/* Grupo 1: cerrar posiciones */}
+                <div style={{
+                  display:"flex", gap:5, alignItems:"center",
+                  background:T.cardLight, border:`1px solid ${T.border}`,
+                  borderRadius:9, padding:"4px 6px",
+                }}>
+                  <span style={{color:T.textMuted, fontSize:9, fontWeight:700,
+                    textTransform:"uppercase", letterSpacing:"0.5px", paddingLeft:4}}>Cerrar</span>
+                  <Btn variant="dark"    onClick={()=>doClose("all")} size="sm">Todas</Btn>
+                  <Btn variant="success" onClick={()=>doClose("pos")} size="sm">✅ Positivas</Btn>
+                  <Btn variant="danger"  onClick={()=>doClose("neg")} size="sm">❌ Negativas</Btn>
+                </div>
+
+                {/* Divisor */}
+                <div style={{width:1, height:28, background:T.border}}/>
+
+                {/* Grupo 2: utilidades */}
+                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>
+
                 {/* Toggle copiadora */}
                 <div style={{
-                  display:"flex", alignItems:"center", gap:8,
-                  background:T.cardLight, border:`1px solid ${T.border}`,
-                  borderRadius:8, padding:"5px 12px",
+                  display:"flex", alignItems:"center", gap:7,
+                  background: activeMaster.copierOn ? T.okLow : T.cardLight,
+                  border:`1px solid ${activeMaster.copierOn ? T.ok+"50" : T.border}`,
+                  borderRadius:8, padding:"5px 11px",
+                  transition:"all 0.2s",
                 }}>
-                  <span style={{color:T.textSec, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px"}}>
-                    Copiadora
+                  <span style={{
+                    color: activeMaster.copierOn ? T.ok : T.textMuted,
+                    fontSize:11, fontWeight:700,
+                    textTransform:"uppercase", letterSpacing:"0.4px",
+                    transition:"color 0.2s",
+                  }}>
+                    {activeMaster.copierOn ? "Activa" : "Pausada"}
                   </span>
                   <Toggle on={activeMaster.copierOn} onChange={()=>toggleCopier(activeMaster.id)} size="sm"/>
                 </div>
@@ -2310,7 +2370,7 @@ function CopyTradeApp() {
         <ModalLogs
           logs={logs}
           filterMasterId={activeMaster?.id}
-          title={`📋 Log — ${activeMaster?.name}`}
+          title={`📋 Operaciones — ${activeMaster?.name}`}
           onClose={close}
         />
       )}
@@ -2320,7 +2380,7 @@ function CopyTradeApp() {
         <ModalLogs
           logs={logs}
           filterFollower={logFollowerFilter}
-          title={`📋 Log — ${logFollowerFilter}`}
+          title={`📋 Operaciones — ${logFollowerFilter}`}
           onClose={close}
         />
       )}
