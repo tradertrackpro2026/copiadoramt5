@@ -1019,6 +1019,15 @@ function addClientToEmpresa(empresa) {
       + '<input id="add-client-label" type="text" placeholder="Ej: Juan Pérez — Principal" maxlength="30"'
       + ' style="width:100%;background:#111627;border:1px solid #2a3260;color:#e8ecf8;border-radius:8px;padding:9px 12px;font-size:12px;font-family:DM Sans,sans-serif;outline:none;box-sizing:border-box">'
     + '</div>'
+    + '<div style="margin-bottom:14px">'
+      + '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:6px">Plan</label>'
+      + '<div style="display:flex;gap:6px;margin-bottom:0">'
+        + '<button onclick="selectPlanOpt(this,\'basic\')" data-plan="basic" style="flex:1;padding:7px 4px;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Exo 2\',sans-serif">🔵 Basic</button>'
+        + '<button onclick="selectPlanOpt(this,\'pro\')" data-plan="pro" style="flex:1;padding:7px 4px;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Exo 2\',sans-serif">🔷 Pro</button>'
+        + '<button onclick="selectPlanOpt(this,\'vip\')" data-plan="vip" style="flex:1;padding:7px 4px;background:#111627;border:1px solid #2a3260;color:#7a85a8;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:\'Exo 2\',sans-serif">👑 VIP</button>'
+      + '</div>'
+      + '<input id="add-client-plan" type="hidden" value="basic">'
+    + '</div>'
     + '<div style="margin-bottom:18px">'
       + '<label style="font-size:10px;font-weight:700;color:#7a85a8;text-transform:uppercase;letter-spacing:1.5px;font-family:Exo 2,sans-serif;display:block;margin-bottom:5px">Dispositivos permitidos</label>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
@@ -1049,6 +1058,15 @@ function addClientToEmpresa(empresa) {
     });
     var lbl = document.getElementById('add-client-label');
     if(lbl) lbl.focus();
+    // Pre-select Basic plan
+    var planBtns = overlay.querySelectorAll('[data-plan]');
+    planBtns.forEach(function(b){
+      if(b.dataset.plan === 'basic'){
+        b.style.background = 'linear-gradient(135deg,#3d4452,#4a5265)';
+        b.style.color = '#fff';
+        b.style.borderColor = '#4a5265';
+      }
+    });
   }, 50);
 }
 
@@ -1060,6 +1078,38 @@ function closeLimitEditOverlay(){
 function closeAddClientOverlay(){
   var o = document.getElementById('add-client-overlay');
   if(o) o.remove();
+}
+
+function selectPlanOpt(btn, val) {
+  var parent = btn.parentNode;
+  Array.from(parent.querySelectorAll('button')).forEach(function(b){
+    b.style.background = '#111627';
+    b.style.color = '#7a85a8';
+    b.style.borderColor = '#2a3260';
+  });
+  btn.style.background = 'linear-gradient(135deg,#3d4452,#4a5265)';
+  btn.style.color = '#fff';
+  btn.style.borderColor = '#4a5265';
+  var hidden = document.getElementById('add-client-plan');
+  if(hidden) hidden.value = val;
+  // Auto-set device limit based on plan
+  var limits = PLAN_LIMITS[val] || PLAN_LIMITS.basic;
+  var maxHidden = document.getElementById('add-client-max');
+  if(maxHidden) maxHidden.value = limits.maxDevices >= 999 ? 999 : limits.maxDevices;
+  // Highlight matching device button if exists
+  var devBtns = document.querySelectorAll('[data-val]');
+  var targetVal = String(limits.maxDevices >= 999 ? 999 : limits.maxDevices);
+  devBtns.forEach(function(b){
+    if(b.dataset.val === targetVal){
+      b.style.background = 'linear-gradient(135deg,#3d4452,#4a5265)';
+      b.style.color = '#fff';
+      b.style.borderColor = '#4a5265';
+    } else {
+      b.style.background = '#111627';
+      b.style.color = '#7a85a8';
+      b.style.borderColor = '#2a3260';
+    }
+  });
 }
 
 function selectDevOpt(btn, val) {
@@ -1081,12 +1131,16 @@ function selectDevOpt(btn, val) {
 async function confirmAddClient(empresa) {
   var labelInput = document.getElementById('add-client-label');
   var maxInput   = document.getElementById('add-client-max');
+  var planInput  = document.getElementById('add-client-plan');
   var msgEl      = document.getElementById('add-client-msg');
-  var maxA = parseInt(maxInput ? maxInput.value : '2') || 2;
+  var maxA  = parseInt(maxInput  ? maxInput.value  : '2')      || 2;
+  var plan  = planInput ? planInput.value : 'basic';
+  var limits = PLAN_LIMITS[plan] || PLAN_LIMITS.basic;
+  var maxMasters   = limits.maxMasters;
+  var maxFollowers = limits.maxFollowers;
 
   msgEl.innerHTML = '<span style="color:var(--gold)">⏳ Creando licencia para ' + empresa + '...</span>';
 
-  // Generar código igual que createLicenses
   var code = empresa + '-' + String(Date.now()).slice(-6) + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
   var url = FB_BASE + '?documentId=' + encodeURIComponent(code) + '&key=' + FB_KEY;
 
@@ -1096,15 +1150,19 @@ async function confirmAddClient(empresa) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         fields: {
-          reseller:     {stringValue: empresa},
-          active:       {booleanValue: true},
-          activations:  {integerValue: '0'},
+          reseller:      {stringValue: empresa},
+          active:        {booleanValue: true},
+          activations:   {integerValue: '0'},
           maxActivations:{integerValue: String(maxA)},
-          createdAt:    {timestampValue: new Date().toISOString()},
-          activatedAt:  {nullValue: null},
-          lastDevice:   {stringValue: ''},
-          devices:      {arrayValue: {values: []}},
-          clientLabel:  {stringValue: (labelInput ? labelInput.value.trim() : '')}
+          plan:          {stringValue: plan},
+          maxMasters:    {integerValue: String(maxMasters)},
+          maxFollowers:  {integerValue: String(maxFollowers)},
+          createdAt:     {timestampValue: new Date().toISOString()},
+          activatedAt:   {nullValue: null},
+          lastDevice:    {stringValue: ''},
+          lastHeartbeat: {nullValue: null},
+          devices:       {arrayValue: {values: []}},
+          clientLabel:   {stringValue: (labelInput ? labelInput.value.trim() : '')}
         }
       })
     });
@@ -1112,7 +1170,8 @@ async function confirmAddClient(empresa) {
     if (res.ok) {
       var overlay = document.getElementById('add-client-overlay');
       if (overlay) overlay.remove();
-      showToast('✅ Código creado: ' + code, 'var(--green)');
+      var planLabel = plan === 'vip' ? '👑 VIP' : plan === 'pro' ? '🔷 Pro' : '🔵 Basic';
+      showToast('✅ ' + planLabel + ' creado: ' + code, 'var(--green)');
       expandedEmpresas[empresa] = true;
       loadLicenses();
     } else {
