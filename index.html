@@ -939,7 +939,7 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
       </div>
     </div>
     <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
-      {[master.platform, master.accountNum].filter(Boolean).map((t,i)=>(
+      {[master.broker, master.platform, master.accountNum].filter(Boolean).map((t,i)=>(
         <span key={i} style={{color:T.textMuted, fontSize:10}}>{i>0?"• ":""}{t}</span>
       ))}
     </div>
@@ -1145,11 +1145,10 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
   const followerLimitReached = maxFollowers < 999 && totalFollowers >= maxFollowers;
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay — sin blur, solo borde visual */}
       {open && (
         <div onClick={onClose} style={{
           position:"fixed", inset:0, zIndex:300,
-          background:"rgba(0,0,0,0.4)", backdropFilter:"blur(2px)",
         }}/>
       )}
       {/* Drawer */}
@@ -1619,10 +1618,6 @@ function CopyTradeApp() {
     return ()=>clearInterval(iv);
   }, []);
 
-  // Auto-abrir drawer cuando hay una maestra activa
-  useEffect(() => {
-    if (activeMId && masters.length > 0) setDrawerOpen(true);
-  }, [activeMId]);
   // Si el admin cambió el plan, el cliente solo necesita refrescar la página.
   useEffect(() => {
     const key = licenseInfo?.key;
@@ -2003,14 +1998,11 @@ function CopyTradeApp() {
         {/* §16 Alertas */}
         <AlertsPanel masters={masters}/>
 
-        {/* ── Tabs de cuentas maestras — online primero ── */}
-        <div style={{display:"flex", gap:12, overflowX:"auto", paddingBottom:6, marginBottom:20}}>
-          {[...masters].sort((a,b) => {
-            const order = {online:0, connected:0, offline:1, disconnected:2};
-            return (order[a.status]||1) - (order[b.status]||1);
-          }).map(m=>(
+        {/* ── Tabs de cuentas maestras — orden de creación ── */}
+        <div style={{display:"flex", gap:12, overflowX:"auto", paddingBottom:6, marginBottom:16}}>
+          {masters.map(m=>(
             <MasterTab key={m.id} master={m} active={m.id===activeMId}
-              onClick={()=>{ setActiveMId(m.id); setDrawerOpen(true); }}
+              onClick={()=>setActiveMId(m.id)}
               onDelete={deleteMaster}
             />
           ))}
@@ -2087,10 +2079,7 @@ function CopyTradeApp() {
                 <Btn variant="dark"    onClick={()=>doClose("all")} size="sm">🕐 Cerrar todas</Btn>
                 <Btn variant="success" onClick={()=>doClose("pos")} size="sm">✅ Cerrar positivas</Btn>
                 <Btn variant="danger"  onClick={()=>doClose("neg")} size="sm">❌ Cerrar negativas</Btn>
-                <Btn variant="ghost"   onClick={()=>setModal("logs")} size="sm">📋 Log</Btn>
-                <Btn variant="primary" onClick={()=>setDrawerOpen(true)} size="sm">
-                  👥 Receptoras ({activeMaster.followers.length})
-                </Btn>
+                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Log</Btn>
                 {/* Toggle copiadora */}
                 <div style={{
                   display:"flex", alignItems:"center", gap:8,
@@ -2114,22 +2103,24 @@ function CopyTradeApp() {
 
         </div>{/* fin parte fija */}
 
-      </div>{/* fin contenido principal */}
+        {/* §15 Receptoras — scroll propio */}
+        <div style={{flex:1, overflowY:"auto", paddingBottom:20}}>
+          {activeMaster && (
+            <FollowersTable
+              master={activeMaster}
+              onAddFollower={mid=>{ setAddFor(mid); setModal("newFollower"); }}
+              onToggle={toggleFollower}
+              onRisk={updateRisk}
+              onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
+              onDelete={deleteFollower}
+              onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
+              maxFollowers={maxFollowers}
+              totalFollowers={totalFollowers}
+            />
+          )}
+        </div>
 
-      {/* §15b Drawer de receptoras */}
-      <DrawerFollowers
-        master={activeMaster}
-        open={drawerOpen}
-        onClose={()=>setDrawerOpen(false)}
-        onAddFollower={mid=>{ setAddFor(mid); setModal("newFollower"); }}
-        onToggle={toggleFollower}
-        onRisk={updateRisk}
-        onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
-        onDelete={deleteFollower}
-        onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
-        maxFollowers={maxFollowers}
-        totalFollowers={totalFollowers}
-      />
+      </div>{/* fin contenido principal */}
 
       {/* ================================================================
           MODALES
