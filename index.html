@@ -1402,6 +1402,32 @@ function CopyTradeApp() {
     });
   }, []); // Solo al montar — el cliente refresca para ver cambios de plan
 
+  // ── § 0c  Polling de licencia cada 5 min — detecta revocaciones automáticamente ──
+  // Llamada ligera (~50ms). No afecta Supabase ni operaciones.
+  useEffect(() => {
+    const key = licenseInfo?.key;
+    if (!key) return;
+    const iv = setInterval(() => {
+      validateLicense(key).then(result => {
+        if (result.valid) {
+          // Actualizar plan si cambió
+          const updated = { key, ...result, valid: true };
+          setLicenseInfo(updated);
+          try { localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+        } else if (result.error && (
+          result.error.includes("revocada") ||
+          result.error.includes("encontrada")
+        )) {
+          // Revocar acceso inmediatamente sin necesidad de refrescar
+          localStorage.removeItem(LICENSE_STORAGE_KEY);
+          setLicenseInfo(null);
+        }
+        // Error de red → no hacer nada, esperar el próximo ciclo
+      });
+    }, 5 * 60 * 1000); // cada 5 minutos
+    return () => clearInterval(iv);
+  }, []); // eslint-disable-line
+
   // ── Simulación de variación de equity (solo cuando NO hay Supabase) ──
   useEffect(()=>{
     if (supaConfig?.url) return; // Supabase conectado → datos reales, sin simulación
