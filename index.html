@@ -896,11 +896,11 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
         {/* Encabezado tabla */}
         <div style={{
           display:"grid", gridTemplateColumns:grid,
-          gap:8, padding:"7px 10px",
+          gap:0, padding:"7px 0",
           background:T.cardLight, borderRadius:"8px 8px 0 0",
           fontSize:10, fontWeight:800, color:T.textMuted, letterSpacing:"0.5px", textTransform:"uppercase",
         }}>
-          {headers.map(h=>(<span key={h}>{h}</span>))}
+          {headers.map(h=>(<span key={h} style={{textAlign:"center", padding:"0 4px"}}>{h}</span>))}
         </div>
         {filtered.length===0 ? (
           <div style={{textAlign:"center", padding:"30px 0", color:T.textMuted, fontSize:13}}>
@@ -909,36 +909,40 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
         ) : filtered.map(l=>(
           <div key={l.id} style={{
             display:"grid", gridTemplateColumns:grid,
-            gap:8, padding:"8px 10px",
+            gap:0, padding:"7px 0",
             borderBottom:`1px solid ${T.border}`,
             background: l.status==="fail" ? T.errLow : "transparent",
             fontSize:12, alignItems:"center",
           }}>
-            <span style={{color:T.textMuted, fontFamily:"monospace"}}>{l.ts}</span>
+            <span style={{color:T.textMuted, fontFamily:"monospace", textAlign:"center", fontSize:11}}>{l.ts}</span>
             {/* Maestra — solo en vista follower y default */}
             {!isMasterView && (
-              <span style={{color:T.textSec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}} title={l.masterName}>
+              <span style={{color:T.textSec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"center", padding:"0 4px"}} title={l.masterName}>
                 {l.masterName?.split(" ").slice(-1)[0]}
               </span>
             )}
-            <Badge label={l.type} color={l.type==="COPY"?T.accent:l.type==="CLOSE"?T.warn:T.purple}/>
-            <Badge label={l.dir||"—"} color={l.dir==="BUY"?T.ok:l.dir==="SELL"?T.err:T.textMuted}/>
+            <div style={{display:"flex", justifyContent:"center"}}>
+              <Badge label={l.type} color={l.type==="COPY"?T.accent:l.type==="CLOSE"?T.warn:T.purple}/>
+            </div>
+            <div style={{display:"flex", justifyContent:"center"}}>
+              <Badge label={l.dir||"—"} color={l.dir==="BUY"?T.ok:l.dir==="SELL"?T.err:T.textMuted}/>
+            </div>
             {/* Follower — solo en vista maestra y default */}
             {!isFollowerView && (
-              <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{l.follower}</span>
+              <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"center", padding:"0 4px"}}>{l.follower}</span>
             )}
-            <span style={{color:T.text, fontWeight:700}}>{l.symbol}</span>
+            <span style={{color:T.text, fontWeight:700, textAlign:"center"}}>{l.symbol}</span>
             {/* Lotes según vista */}
-            {isMasterView && <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11}}>{l.lotsM||"—"}</span>}
-            {isFollowerView && <span style={{color:T.textSec, fontFamily:"monospace", fontSize:11}}>{l.lots||"—"}</span>}
+            {isMasterView && <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11, textAlign:"center"}}>{l.lotsM||"—"}</span>}
+            {isFollowerView && <span style={{color:T.textSec, fontFamily:"monospace", fontSize:11, textAlign:"center"}}>{l.lots||"—"}</span>}
             {!isMasterView && !isFollowerView && <>
-              <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11}}>{l.lotsM||"—"}</span>
-              <span style={{color:T.textSec, fontFamily:"monospace", fontSize:11}}>{l.lots||"—"}</span>
+              <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11, textAlign:"center"}}>{l.lotsM||"—"}</span>
+              <span style={{color:T.textSec, fontFamily:"monospace", fontSize:11, textAlign:"center"}}>{l.lots||"—"}</span>
             </>}
             {/* Resultado P&L — solo en vistas maestra o follower */}
             {(isMasterView || isFollowerView) && (
               <span style={{
-                fontFamily:"monospace", fontWeight:700, fontSize:11,
+                fontFamily:"monospace", fontWeight:700, fontSize:11, textAlign:"center",
                 color: l.resultado == null ? T.textMuted
                      : l.resultado >= 0   ? T.ok
                      :                      T.err,
@@ -947,7 +951,9 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
                   : (l.resultado >= 0 ? "+" : "") + l.resultado.toFixed(2)}
               </span>
             )}
-            <Badge label={l.status==="ok"?"✓ OK":"✗ FAIL"} color={l.status==="ok"?T.ok:T.err}/>
+            <div style={{display:"flex", justifyContent:"center"}}>
+              <Badge label={l.status==="ok"?"✓ OK":"✗ FAIL"} color={l.status==="ok"?T.ok:T.err}/>
+            </div>
           </div>
         ))}
       </div>
