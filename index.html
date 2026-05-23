@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>CopyTrade MT5 Pro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -1011,7 +1012,7 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
       }}>{master.tag}</div>
       <div style={{minWidth:0}}>
         <div style={{color:T.text, fontWeight:700, fontSize:14, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
-          {master.name}
+          {master.broker || master.name}
         </div>
         <div style={{display:"flex", alignItems:"center", gap:5, marginTop:2}}>
           <Dot status={master.status}/>
@@ -1022,7 +1023,7 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
       </div>
     </div>
     <div style={{display:"flex", gap:5, flexWrap:"wrap", alignItems:"center"}}>
-      {[master.broker, master.platform, master.accountNum].filter(Boolean).map((t,i)=>(
+      {[master.accountNum, master.platform].filter(Boolean).map((t,i)=>(
         <span key={i} style={{color:T.textMuted, fontSize:10}}>{i>0?"• ":""}{t}</span>
       ))}
       {master.tipoCuenta && (
@@ -1340,10 +1341,10 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         }}>{follower.tag}</div>
         <div style={{minWidth:0}}>
           <div style={{color:T.text, fontWeight:700, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-            {follower.name}
+            {follower.broker || follower.name}
           </div>
           <div style={{color:T.textMuted, fontSize:12, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-            {follower.accountNum} • {follower.platform} • {follower.broker}
+            {follower.accountNum} · {follower.platform}
           </div>
           <div style={{display:"flex", gap:4, marginTop:3, flexWrap:"wrap", alignItems:"center"}}>
             {follower.tipoCuenta && (
@@ -2126,19 +2127,19 @@ function CopyTradeApp() {
   }, [supaConfig]);
 
   const toggleFollower = useCallback(async fid => {
+    // Calcular newVal ANTES del setMasters para garantizar valor correcto en el PATCH
     let newVal = true;
-    setMasters(p => {
-      const updated = p.map(m => ({
-        ...m,
-        followers: m.followers.map(f => {
-          if (f.id === fid) { newVal = !f.enabled; return {...f, enabled: newVal}; }
-          return f;
-        })
-      }));
-      return updated;
-    });
+    for (const m of masters) {
+      const f = m.followers.find(f => f.id === fid);
+      if (f) { newVal = !f.enabled; break; }
+    }
     // Proteger por 6s contra sobreescritura del poll
     protectedToggles.current.set(`f:${fid}`, { val: newVal, exp: Date.now() + 6000 });
+    // Actualizar UI inmediatamente
+    setMasters(p => p.map(m => ({
+      ...m,
+      followers: m.followers.map(f => f.id === fid ? {...f, enabled: newVal} : f)
+    })));
     // Escribir en Supabase para que el EA Follower lo lea
     if (supaConfig?.url) {
       const h = {
@@ -2152,7 +2153,7 @@ function CopyTradeApp() {
         body: JSON.stringify({ activa: newVal }),
       });
     }
-  }, [supaConfig]);
+  }, [supaConfig, masters]);
 
   const updateRisk = useCallback((fid,val)=>{
     setMasters(p=>p.map(m=>({...m,followers:m.followers.map(f=>f.id===fid?{...f,riskPct:val}:f)})));
@@ -2204,7 +2205,13 @@ function CopyTradeApp() {
       const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*`, { headers: h });
       if (!rM.ok) return;
       const maestras = await rM.json();
-      if (!maestras || maestras.length === 0) return;
+
+      // Si no hay maestras, limpiar el estado (pueden haberse borrado todas)
+      if (!maestras || maestras.length === 0) {
+        setMasters([]);
+        setActiveMId(null);
+        return;
+      }
 
       const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*`, { headers: h });
       const receptoras = rR.ok ? await rR.json() : [];
@@ -2509,16 +2516,23 @@ function CopyTradeApp() {
                 <div>
                   <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
                     <h2 style={{margin:0, fontSize:20, fontWeight:900, color:T.text}}>
-                      {activeMaster.name}
+                      {activeMaster.broker || activeMaster.name}
                     </h2>
                     <Dot status={activeMaster.status}/>
                     <span style={{color:statusClr(activeMaster.status), fontSize:12, fontWeight:700}}>
                       {statusLabel(activeMaster.status)}
                     </span>
                     {activeMaster.readOnly && <Badge label="Solo lectura" color={T.warn}/>}
+                    {activeMaster.tipoCuenta && (
+                      <span style={{
+                        fontSize:10, fontWeight:800, padding:"2px 7px", borderRadius:5,
+                        background: activeMaster.tipoCuenta==="Real" ? T.okLow : "#2a2000",
+                        color:      activeMaster.tipoCuenta==="Real" ? T.ok    : "#f5a623",
+                      }}>{activeMaster.tipoCuenta.toUpperCase()}</span>
+                    )}
                   </div>
                   <div style={{color:T.textMuted, fontSize:13, marginTop:4}}>
-                    {activeMaster.broker} · {activeMaster.platform} · {activeMaster.accountNum}
+                    {activeMaster.accountNum} · {activeMaster.platform}
                   </div>
                 </div>
               </div>
