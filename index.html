@@ -871,20 +871,25 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
     );
   }
 
-  // Vista maestra → solo L.Master | Vista follower → solo L.Copia
+  // Vista maestra → quita columna "Maestra" (redundante), muestra L.Master + Resultado
+  // Vista follower → quita columna "Follower" (redundante), muestra L.Copia + Resultado
   const isMasterView   = !!filterMasterId;
   const isFollowerView = !!filterFollower;
-  const grid = isMasterView || isFollowerView
-    ? "50px 65px 65px 50px 1fr 55px 55px 65px 55px"
-    : "50px 65px 65px 50px 1fr 55px 48px 48px 55px";
-  const headers = isMasterView
-    ? ["Hora","Maestra","Tipo","Dir","Follower","Símbolo","L.Master","Resultado","Estado"]
+
+  const grid = isMasterView
+    ? "55px 65px 50px 1fr 70px 65px 75px 70px"
     : isFollowerView
-      ? ["Hora","Maestra","Tipo","Dir","Follower","Símbolo","L.Copia","Resultado","Estado"]
+      ? "55px 80px 65px 50px 70px 65px 75px 70px"
+      : "50px 65px 65px 50px 1fr 55px 48px 48px 55px";
+
+  const headers = isMasterView
+    ? ["Hora","Tipo","Dir","Follower","Símbolo","Lotaje","Resultado","Estado"]
+    : isFollowerView
+      ? ["Hora","Maestra","Tipo","Dir","Símbolo","Lotaje","Resultado","Estado"]
       : ["Hora","Maestra","Tipo","Dir","Follower","Símbolo","L.Master","L.Copia","Estado"];
 
   return (
-    <ModalWrap onClose={onClose} maxW={760}>
+    <ModalWrap onClose={onClose} maxW={820}>
       <ModalHd title={title||"📋 Operaciones"} onClose={onClose}/>
       <Inp value={search} onChange={setSearch} placeholder="Buscar por símbolo, follower, dirección..."/>
       <div style={{marginTop:12, overflowY:"auto", maxHeight:420}}>
@@ -910,12 +915,18 @@ const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => 
             fontSize:12, alignItems:"center",
           }}>
             <span style={{color:T.textMuted, fontFamily:"monospace"}}>{l.ts}</span>
-            <span style={{color:T.textSec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}} title={l.masterName}>
-              {l.masterName?.split(" ").slice(-1)[0]}
-            </span>
+            {/* Maestra — solo en vista follower y default */}
+            {!isMasterView && (
+              <span style={{color:T.textSec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}} title={l.masterName}>
+                {l.masterName?.split(" ").slice(-1)[0]}
+              </span>
+            )}
             <Badge label={l.type} color={l.type==="COPY"?T.accent:l.type==="CLOSE"?T.warn:T.purple}/>
             <Badge label={l.dir||"—"} color={l.dir==="BUY"?T.ok:l.dir==="SELL"?T.err:T.textMuted}/>
-            <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{l.follower}</span>
+            {/* Follower — solo en vista maestra y default */}
+            {!isFollowerView && (
+              <span style={{color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{l.follower}</span>
+            )}
             <span style={{color:T.text, fontWeight:700}}>{l.symbol}</span>
             {/* Lotes según vista */}
             {isMasterView && <span style={{color:T.warn, fontFamily:"monospace", fontWeight:700, fontSize:11}}>{l.lotsM||"—"}</span>}
