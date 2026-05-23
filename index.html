@@ -1021,10 +1021,18 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
         </div>
       </div>
     </div>
-    <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
+    <div style={{display:"flex", gap:5, flexWrap:"wrap", alignItems:"center"}}>
       {[master.broker, master.platform, master.accountNum].filter(Boolean).map((t,i)=>(
         <span key={i} style={{color:T.textMuted, fontSize:10}}>{i>0?"• ":""}{t}</span>
       ))}
+      {master.tipoCuenta && (
+        <span style={{
+          fontSize:9, fontWeight:800, padding:"1px 5px", borderRadius:4,
+          background: master.tipoCuenta==="Real" ? T.okLow : "#2a2000",
+          color:      master.tipoCuenta==="Real" ? T.ok    : "#f5a623",
+          letterSpacing:"0.3px",
+        }}>{master.tipoCuenta.toUpperCase()}</span>
+      )}
     </div>
   </div>
 );
@@ -1337,7 +1345,15 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
           <div style={{color:T.textMuted, fontSize:12, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
             {follower.accountNum} • {follower.platform} • {follower.broker}
           </div>
-          <div style={{display:"flex", gap:4, marginTop:3, flexWrap:"wrap"}}>
+          <div style={{display:"flex", gap:4, marginTop:3, flexWrap:"wrap", alignItems:"center"}}>
+            {follower.tipoCuenta && (
+              <span style={{
+                fontSize:9, fontWeight:800, padding:"1px 5px", borderRadius:4,
+                background: follower.tipoCuenta==="Real" ? T.okLow : "#2a2000",
+                color:      follower.tipoCuenta==="Real" ? T.ok    : "#f5a623",
+                letterSpacing:"0.3px",
+              }}>{follower.tipoCuenta.toUpperCase()}</span>
+            )}
             {follower.readOnly && <Badge label="Solo lectura" color={T.warn}/>}
             {follower.delayMs>0 && <Badge label={`Delay ${follower.delayMs}ms`} color={T.purple}/>}
             {!follower.enabled && <Badge label="Pausada" color={T.textMuted}/>}
@@ -2225,6 +2241,7 @@ function CopyTradeApp() {
               ping:        r.ping_ms || 0,
               failedCopies:r.copias_fallidas || 0,
               lastOp:      r.ultima_op ? new Date(r.ultima_op).toLocaleTimeString("es",{hour12:false}) : "—",
+              tipoCuenta:  r.tipo_cuenta || "Demo",
             }))
         );
         return {
@@ -2240,6 +2257,7 @@ function CopyTradeApp() {
           openPnL:   parseFloat(m.pnl_abierto) || 0,
           copierOn:  m.copiadora_on !== false,
           readOnly:  false,
+          tipoCuenta: m.tipo_cuenta || "Demo",
           opsToday:  opsHoy,
           lotesHoy:  +lotesHoy.toFixed(2),
           followers,
