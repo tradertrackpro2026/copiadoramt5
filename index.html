@@ -137,18 +137,17 @@ const LicenseGate = ({ onValidated }) => {
       display:"flex", alignItems:"center", justifyContent:"center", padding:20,
       position:"relative",
     }}>
-      {/* Overlay oscuro sobre la imagen */}
+      {/* Overlay suave — imagen visible */}
       <div style={{
         position:"absolute", inset:0,
-        background:"linear-gradient(160deg, rgba(0,0,0,0.82) 0%, rgba(5,5,12,0.88) 100%)",
-        backdropFilter:"blur(1px)",
+        background:"linear-gradient(160deg, rgba(0,0,0,0.55) 0%, rgba(5,5,12,0.65) 100%)",
       }}/>
       <div style={{
         position:"relative", zIndex:1,
-        background:"rgba(14,14,20,0.75)", border:"1px solid rgba(129,140,248,0.25)",
+        background:"rgba(8,8,14,0.72)", border:"1px solid rgba(129,140,248,0.30)",
         borderRadius:20, padding:"40px 36px", width:"100%", maxWidth:420,
-        boxShadow:"0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
-        backdropFilter:"blur(12px)",
+        boxShadow:"0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06)",
+        backdropFilter:"blur(16px) saturate(1.4)",
       }}>
         {/* Logo */}
         <div style={{display:"flex", justifyContent:"center", marginBottom:24}}>
@@ -1281,7 +1280,7 @@ const ActionBtn = ({ icon, text, label, onClick, variant="default" }) => {
 };
 
 const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) => {
-  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.9fr";
+  const COLS = "2.2fr 1fr 1.6fr 1.9fr";
   return (
     <div style={{
       display:"grid", gridTemplateColumns:COLS, gap:12,
@@ -1342,26 +1341,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         </div>
       </div>
 
-      {/* ─ Col 4: Riesgo por operación ─ */}
-      <div style={{display:"flex", alignItems:"center", gap:5}}>
-        <button onClick={()=>{playClick(); onRisk(follower.id, Math.max(0.01, +(follower.riskPct-0.01).toFixed(2)));}}
-          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.12s"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=T.cardMid;e.currentTarget.style.transform="scale(1.1)";}}
-          onMouseLeave={e=>{e.currentTarget.style.background=T.cardLight;e.currentTarget.style.transform="scale(1)";}}>
-          −
-        </button>
-        <span style={{color:T.text, fontWeight:800, fontSize:13, minWidth:44, textAlign:"center", fontFamily:"monospace"}}>
-          {fmtPct(follower.riskPct)}
-        </span>
-        <button onClick={()=>{playClick(); onRisk(follower.id, +(follower.riskPct+0.01).toFixed(2));}}
-          style={{width:22,height:22,borderRadius:5,border:`1px solid ${T.border}`,background:T.cardLight,color:T.text,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.12s"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=T.cardMid;e.currentTarget.style.transform="scale(1.1)";}}
-          onMouseLeave={e=>{e.currentTarget.style.background=T.cardLight;e.currentTarget.style.transform="scale(1)";}}>
-          +
-        </button>
-      </div>
-
-      {/* ─ Col 5: Estado + Botones directos ─ */}
+      {/* ─ Col 4: Estado + Botones directos ─ */}
       <div style={{display:"flex", flexDirection:"column", gap:7}}>
 
         {/* Fila 1: punto + estado + toggle */}
@@ -1550,12 +1530,11 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
    Encabezados de tabla + listado de FollowerRow.
    ================================================================ */
 const FollowersTable = ({ master, onAddFollower, onToggle, onRisk, onEdit, onDelete, onLog, maxFollowers, totalFollowers }) => {
-  const COLS = "2.2fr 1fr 1.4fr 1.2fr 1.9fr";
+  const COLS = "2.2fr 1fr 1.6fr 1.9fr";
   const HEADERS = [
     { label:"Cuenta Receptora" },
     { label:"Balance" },
     { label:"% Capital", tip:"Porcentaje del capital de esta cuenta usado para copiar lotes." },
-    { label:"Riesgo/op",  tip:"Porcentaje del balance arriesgado por operación copiada." },
     { label:"Estado · Acciones" },
   ];
 
@@ -1929,6 +1908,8 @@ function CopyTradeApp() {
   // ── Estado global — arranca vacío, sin datos demo ──
   const [masters, setMasters]       = useState([]);
   const [activeMId, setActiveMId]   = useState(null);
+  // Ref que protege toggles recientes del poll de Supabase (5s)
+  const protectedToggles = useRef(new Map()); // key: "m:{mid}" | "f:{fid}", val: {val, exp}
   const [logs, setLogs]             = useState([]);
   const [supaConfig, setSupaConfig] = useState(configGuardada);
   const [demoMode, setDemoMode]     = useState(!configGuardada?.url);
@@ -2047,11 +2028,11 @@ function CopyTradeApp() {
   }, [supaConfig]);
 
   const toggleCopier = useCallback(async mid => {
-    // Leer valor actual para invertirlo
     const current = masters.find(m => m.id === mid);
     if (!current) return;
     const newVal = !current.copierOn;
-    // Escribir en Supabase para que el EA lo lea
+    // Proteger por 6s contra sobreescritura del poll
+    protectedToggles.current.set(`m:${mid}`, { val: newVal, exp: Date.now() + 6000 });
     if (supaConfig?.url) {
       const h = {
         "apikey": supaConfig.key,
@@ -2104,7 +2085,6 @@ function CopyTradeApp() {
   }, [supaConfig]);
 
   const toggleFollower = useCallback(async fid => {
-    // Leer valor actual para invertirlo
     let newVal = true;
     setMasters(p => {
       const updated = p.map(m => ({
@@ -2116,6 +2096,8 @@ function CopyTradeApp() {
       }));
       return updated;
     });
+    // Proteger por 6s contra sobreescritura del poll
+    protectedToggles.current.set(`f:${fid}`, { val: newVal, exp: Date.now() + 6000 });
     // Escribir en Supabase para que el EA Follower lo lea
     if (supaConfig?.url) {
       const h = {
@@ -2237,14 +2219,31 @@ function CopyTradeApp() {
         };
       });
 
-      // Merge: actualiza las existentes, conserva las creadas localmente que aún
-      // no llegaron al poll (evita el parpadeo / desaparición al crear)
+      // Limpiar protectedToggles expirados
+      const now = Date.now();
+      protectedToggles.current.forEach((v, k) => { if (v.exp < now) protectedToggles.current.delete(k); });
+
+      // Merge: actualiza existentes, preserva toggles recientes y cuentas locales nuevas
       setMasters(prev => {
         const supaIds = new Set(mapped.map(m => m.id));
-        // Maestras locales que Supabase todavía no devolvió (recién creadas)
         const localOnly = prev.filter(p => !supaIds.has(p.id));
-        // Unir y ordenar siempre por ID para posición fija
-        return sortById([...mapped, ...localOnly]);
+
+        const protected_ = protectedToggles.current;
+        const mergedMapped = mapped.map(m => {
+          // Respetar toggle de copiadora si fue reciente
+          const copierProtected = protected_.get(`m:${m.id}`);
+          const followers = m.followers.map(f => {
+            const fProtected = protected_.get(`f:${f.id}`);
+            return fProtected ? { ...f, enabled: fProtected.val } : f;
+          });
+          return {
+            ...m,
+            copierOn: copierProtected ? copierProtected.val : m.copierOn,
+            followers,
+          };
+        });
+
+        return sortById([...mergedMapped, ...localOnly]);
       });
 
       setActiveMId(prev => prev || mapped[0]?.id || null);
