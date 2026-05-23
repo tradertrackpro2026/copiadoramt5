@@ -62,7 +62,7 @@ const validateLicense = async (licenseKey) => {
         maxMasters:   data.maxMasters   || 1,
         maxFollowers: data.maxFollowers || 3,
         reseller:     data.reseller     || "",
-        clientId:     data.clientId     || "",
+
       };
     }
     // Mapear errores a mensajes legibles
@@ -2000,7 +2000,6 @@ function CopyTradeApp() {
           broker: m.broker, plataforma: "MT5",
           estado: "offline", balance: 0, equidad: 0,
           pnl_abierto: 0, copiadora_on: true,
-          client_id: licenseInfo?.clientId || "",
         }),
       });
     }
@@ -2059,7 +2058,6 @@ function CopyTradeApp() {
           nombre: f.name, broker: f.broker, plataforma: "MT5",
           estado: "offline", balance: 0,
           capital_pct: 50, riesgo_pct: 0.5, activa: true,
-          client_id: licenseInfo?.clientId || "",
         }),
       });
     }
@@ -2142,12 +2140,12 @@ function CopyTradeApp() {
     };
     try {
       // ORDER BY created_at → siempre llegan en orden de creación
-      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*&client_id=eq.${licenseInfo?.clientId || ""}`, { headers: h });
+      const rM = await fetch(`${cfg.url}/rest/v1/cuentas_maestras?select=*`, { headers: h });
       if (!rM.ok) return;
       const maestras = await rM.json();
       if (!maestras || maestras.length === 0) return;
 
-      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*&client_id=eq.${licenseInfo?.clientId || ""}`, { headers: h });
+      const rR = await fetch(`${cfg.url}/rest/v1/cuentas_receptoras?select=*`, { headers: h });
       const receptoras = rR.ok ? await rR.json() : [];
 
       const hoy = new Date().toISOString().split("T")[0];
@@ -2382,8 +2380,8 @@ function CopyTradeApp() {
         <div style={{flexShrink:0, maxHeight:"55vh", overflowY:"auto"}}>
 
 
-        {/* §16 Alertas */}
-        <AlertsPanel masters={masters}/>
+        {/* §16 Alertas — solo del master activo */}
+        <AlertsPanel masters={activeMaster ? [activeMaster] : []}/>
 
         {/* ── Tabs de cuentas maestras — orden de creación ── */}
         <div style={{display:"flex", gap:12, overflowX:"auto", paddingBottom:6, marginBottom:16}}>
