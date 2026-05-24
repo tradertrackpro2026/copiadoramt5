@@ -809,7 +809,12 @@ const ModalEAParams = ({ licenseInfo, supaConfig, masters, onClose }) => {
       </div>
 
       {/* URLs para MT5 WebRequest */}
-      <div style={{background:T.cardLight, borderRadius:12, overflow:"hidden", marginBottom:16, border:`1px solid ${T.border}`}}>\n        <div style={{padding:"8px 14px", background:T.card, borderBottom:`1px solid ${T.border}`, fontSize:11, fontWeight:800, color:T.textSec, textTransform:"uppercase", letterSpacing:"1px"}}>\n          🌐 URLs — Agregar en MT5 → Herramientas → Opciones → Asesores Expertos\n        </div>\n        <Row label="URL de Supabase (WebRequest)"      value={supaConfig?.url || ""}                                          id="wb-supa"/>\n        <Row label="URL del servidor de licencias"     value="https://copytrade-license-worker.anibalchingal90.workers.dev"   id="wb-worker"/>\n      </div>\n\n      {/* Licencia y Supabase */}
+      <div style={{background:T.cardLight, borderRadius:12, overflow:"hidden", marginBottom:16, border:`1px solid ${T.border}`}}>
+        <div style={{padding:"8px 14px", background:T.card, borderBottom:`1px solid ${T.border}`, fontSize:11, fontWeight:800, color:T.textSec, textTransform:"uppercase", letterSpacing:"1px"}}>
+          🌐 URLs — Agregar en MT5 → Herramientas → Opciones → Asesores Expertos
+        </div>
+        <Row label="URL del servidor de licencias" value="https://copytrade-license-worker.anibalchingal90.workers.dev" id="wb-worker"/>
+      </div>
       <div style={{background:T.cardLight, borderRadius:12, overflow:"hidden", marginBottom:16, border:`1px solid ${T.border}`}}>
         <div style={{padding:"8px 14px", background:T.card, borderBottom:`1px solid ${T.border}`, fontSize:11, fontWeight:800, color:T.textSec, textTransform:"uppercase", letterSpacing:"1px"}}>
           🔐 Licencia y Supabase
