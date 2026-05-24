@@ -861,11 +861,13 @@ const ModalEAParams = ({ licenseInfo, supaConfig, masters, onClose }) => {
    Historial completo de copias, cierres y errores.
    Se puede filtrar por maestra o ver todo el historial.
    ================================================================ */
-const ModalLogs = ({ logs, filterMasterId, filterFollower, title, onClose }) => {
+const ModalLogs = ({ logs, filterMasterId, filterFollower, filterFollowerId, title, onClose }) => {
   const [search, setSearch] = useState("");
   let filtered = logs;
   if (filterMasterId) filtered = filtered.filter(l=>l.masterId===filterMasterId);
-  if (filterFollower) filtered = filtered.filter(l=>l.follower===filterFollower);
+  // Filtrar por ID real del follower si está disponible, si no por nombre
+  if (filterFollowerId) filtered = filtered.filter(l=>l.followerId===filterFollowerId);
+  else if (filterFollower) filtered = filtered.filter(l=>l.follower===filterFollower);
   if (search) {
     const s = search.toLowerCase();
     filtered = filtered.filter(l=>
@@ -1966,10 +1968,11 @@ function CopyTradeApp() {
   const [modal, setModal]               = useState(null);
   const [editingFollower, setEditing]   = useState(null);
   const [logFollowerFilter, setLogFilt] = useState(null);
+  const [logFollowerIdFilter, setLogFiltId] = useState(null);
   const [addFollowerFor, setAddFor]     = useState(null);
   const [drawerOpen, setDrawerOpen]     = useState(false);
 
-  const close  = () => { setModal(null); setEditing(null); setLogFilt(null); setAddFor(null); };
+  const close  = () => { setModal(null); setEditing(null); setLogFilt(null); setLogFiltId(null); setAddFor(null); };
   const activeMaster = masters.find(m=>m.id===activeMId) || masters[0];
 
   // ── Simulación de ping en tiempo real ──
@@ -2376,6 +2379,7 @@ function CopyTradeApp() {
           masterId:   e.maestra_id    || "—",
           masterName: maestrasMap[e.maestra_id] || e.maestra_id || "—",
           follower:   receptorasMap[e.receptora_id] || e.receptora_id || "—",
+          followerId: e.receptora_id || null,
           type:       senal.tipo      || "COPY",
           symbol:     senal.simbolo   || "—",
           dir:        senal.direccion || "—",
@@ -2589,7 +2593,7 @@ function CopyTradeApp() {
               onRisk={updateRisk}
               onEdit={f=>{ setEditing(f); setModal("editFollower"); }}
               onDelete={deleteFollower}
-              onLog={f=>{ setLogFilt(f.name); setModal("logFollower"); }}
+              onLog={f=>{ setLogFilt(f.name); setLogFiltId(f.id); setModal("logFollower"); }}
               maxFollowers={maxFollowers}
               totalFollowers={totalFollowers}
             />
@@ -2653,6 +2657,7 @@ function CopyTradeApp() {
         <ModalLogs
           logs={logs}
           filterFollower={logFollowerFilter}
+          filterFollowerId={logFollowerIdFilter}
           title={`📋 Operaciones — ${logFollowerFilter}`}
           onClose={close}
         />
