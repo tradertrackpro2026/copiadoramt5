@@ -1904,7 +1904,8 @@ const Header = ({ supaConfig, onOpenSupabase, onAddMaster, onOpenLogs, onOpenEAP
 
       {/* ── Derecha: Acciones ── */}
       <div style={{display:"flex", gap:7, alignItems:"center", flexShrink:0}}>
-        <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Operaciones</Btn>
+        {/* Botón Operaciones ocultado — cada cuenta tiene su propio botón */}
+        {false && <Btn variant="ghost" onClick={onOpenLogs} size="sm">📋 Operaciones</Btn>}
         <Btn variant="ghost" onClick={onOpenEAParams} size="sm">🖥️ Params EA</Btn>
         <Btn variant="ghost" onClick={onOpenSupabase} size="sm">
           {supaConfig?.url ? "🟢 Supabase" : "⚙️ Supabase"}
