@@ -1414,7 +1414,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           {/* Botones visibles directamente */}
           <div style={{display:"flex", gap:4}}>
-            <ActionBtn icon="📋" text="Ops"      label="Ver operaciones"  variant="log"    onClick={()=>onLog(follower)}/>
+            {false && <ActionBtn icon="📋" text="Ops" label="Ver operaciones" variant="log" onClick={()=>onLog(follower)}/>}
             <ActionBtn icon="🗑" text="Eliminar" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
           </div>
           {/* Ping y última op */}
@@ -2550,7 +2550,7 @@ function CopyTradeApp() {
 
               {/* Acciones — solo lo que funciona */}
               <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>
+                {false && <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>}
 
                 {/* Toggle copiadora */}
                 <div style={{
