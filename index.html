@@ -1052,10 +1052,11 @@ const MasterTab = ({ master, active, onClick, onDelete }) => (
    Muestra balance, equity, P&L, número de seguidores y ops del día.
    Los valores se actualizan en tiempo real desde el EA via Supabase.
    ================================================================ */
-const StatCell = ({ label, value, color, note, border=true }) => (
+const StatCell = ({ label, value, color, note, border=true, style }) => (
   <div style={{
     padding:"0 22px 0 0",
     borderRight: border ? `1px solid ${T.border}` : "none",
+    ...style
   }}>
     <div style={{color:T.textMuted, fontSize:10, marginBottom:6, fontWeight:700,
       textTransform:"uppercase", letterSpacing:"0.8px", whiteSpace:"nowrap"}}>
@@ -1258,12 +1259,14 @@ const StatsBar = ({ master }) => (
       note={`${master.followers.filter(f=>f.enabled).length} activa(s)`}/>
     <StatCell label="Ops hoy"
       value={master.opsToday}
-      note="copias ejecutadas"/>
+      note="copias ejecutadas"
+      style={{display:"none"}}/>
     <StatCell label="Lotes hoy"
       value={master.lotesHoy != null ? master.lotesHoy.toFixed(2) : "—"}
       color={T.warn}
       note="total receptoras"
-      border={false}/>
+      border={false}
+      style={{display:"none"}}/>
   </div>
 );
 
@@ -1414,7 +1417,7 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           {/* Botones visibles directamente */}
           <div style={{display:"flex", gap:4}}>
-            {false && <ActionBtn icon="📋" text="Ops" label="Ver operaciones" variant="log" onClick={()=>onLog(follower)}/>}
+            <ActionBtn icon="📋" text="Ops"      label="Ver operaciones"  variant="log"    onClick={()=>onLog(follower)}/>
             <ActionBtn icon="🗑" text="Eliminar" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
           </div>
           {/* Ping y última op */}
@@ -2550,7 +2553,7 @@ function CopyTradeApp() {
 
               {/* Acciones — solo lo que funciona */}
               <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                {false && <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>}
+                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>
 
                 {/* Toggle copiadora */}
                 <div style={{
