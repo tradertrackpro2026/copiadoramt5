@@ -360,7 +360,7 @@ const makeSupaClient = (url, key) => {
    ================================================================ */
 
 /* — Botón — */
-const Btn = ({ children, onClick, variant="primary", size="md", disabled=false, sx={} }) => {
+const Btn = ({ children, onClick, variant="primary", size="md", disabled=false, sx={}, style={} }) => {
   const [pressed, setPressed] = React.useState(false);
   const base = {
     cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.45:1,
@@ -384,7 +384,7 @@ const Btn = ({ children, onClick, variant="primary", size="md", disabled=false, 
   };
   return (
     <button
-      style={{...base,...variants[variant],...sx}}
+      style={{...base,...variants[variant],...sx,...style}}
       onClick={disabled ? undefined : () => { playClick(); onClick && onClick(); }}
       onMouseDown={() => !disabled && setPressed(true)}
       onMouseUp={() => setPressed(false)}
@@ -1293,7 +1293,7 @@ const playClick = () => {
 };
 
 /* Botón de acción con texto + icono + efecto hover/press */
-const ActionBtn = ({ icon, text, label, onClick, variant="default" }) => {
+const ActionBtn = ({ icon, text, label, onClick, variant="default", style }) => {
   const [pressed, setPressed] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const colors = {
@@ -1323,6 +1323,7 @@ const ActionBtn = ({ icon, text, label, onClick, variant="default" }) => {
         transform: pressed ? "scale(0.93)" : hovered ? "scale(1.04)" : "scale(1)",
         boxShadow: active ? c.glow : "none",
         fontWeight: 700, fontFamily:"inherit",
+        ...(style||{}),
       }}>
       <span style={{fontSize:13}}>{icon}</span>
       {text && <span style={{fontSize:10, letterSpacing:"0.3px"}}>{text}</span>}
@@ -1417,8 +1418,8 @@ const FollowerRow = ({ follower, onToggle, onRisk, onEdit, onDelete, onLog }) =>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
           {/* Botones visibles directamente */}
           <div style={{display:"flex", gap:4}}>
-            <ActionBtn icon="📋" text="Ops"      label="Ver operaciones"  variant="log"    onClick={()=>onLog(follower)}/>
-            <ActionBtn icon="🗑" text="Eliminar" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
+            <ActionBtn icon="📋" text="Ops"      label="Ver operaciones"  variant="log"    onClick={()=>onLog(follower)} style={{display:"none"}}/>
+            <ActionBtn icon="🗑" text="Eliminar cuenta" label="Eliminar cuenta"  variant="danger" onClick={()=>onDelete(follower.id)}/>
           </div>
           {/* Ping y última op */}
           <div style={{textAlign:"right"}}>
@@ -1537,7 +1538,7 @@ const DrawerFollowers = ({ master, open, onClose, onAddFollower, onToggle, onRis
                             background:T.cardLight, border:`1px solid ${T.border}`,
                             borderRadius:6, padding:"4px 8px", color:T.textSec,
                             fontSize:11, cursor:"pointer",
-                          }}>📋</button>
+                          }} style={{display:"none"}}>📋</button>
                           <button onClick={()=>onDelete(f.id)} style={{
                             background:"rgba(255,56,96,.08)", border:`1px solid ${T.err}30`,
                             borderRadius:6, padding:"4px 8px", color:T.err,
@@ -2553,7 +2554,7 @@ function CopyTradeApp() {
 
               {/* Acciones — solo lo que funciona */}
               <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm">📋 Operaciones</Btn>
+                <Btn variant="ghost" onClick={()=>setModal("logs")} size="sm" style={{display:"none"}}>📋 Operaciones</Btn>
 
                 {/* Toggle copiadora */}
                 <div style={{
